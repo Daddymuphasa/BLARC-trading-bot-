@@ -2,6 +2,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { buildMarketRiskLines, classifyAddress, findBestPair, formatPairSummary } from "./dexscreener.js";
+import { loadEnvFile } from "./env.js";
+
+loadEnvFile();
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const botUsername = process.env.BLARC_BOT_USERNAME || "theBLARCbot";
@@ -102,8 +105,8 @@ async function handleStart(message) {
       "This MVP is live in safe mode: token scans, wallet watchlists, alerts settings, support links, and product onboarding.",
       "",
       "<b>Quick commands</b>",
-      "/scan <contract> - run token and market risk checks",
-      "/watch <wallet> - add a wallet to your watchlist",
+      "/scan &lt;contract&gt; - run token and market risk checks",
+      "/watch &lt;wallet&gt; - add a wallet to your watchlist",
       "/watchlist - view watched wallets",
       "/price <token> - lookup live DEX price",
       "/settings - view your bot settings",
@@ -120,9 +123,9 @@ async function handleHelp(message) {
     [
       "<b>BLARC Commands</b>",
       "/start - onboarding",
-      "/scan <contract> - token and market risk checks",
-      "/watch <wallet> - save wallet to watch",
-      "/unwatch <wallet> - remove wallet",
+      "/scan &lt;contract&gt; - token and market risk checks",
+      "/watch &lt;wallet&gt; - save wallet to watch",
+      "/unwatch &lt;wallet&gt; - remove wallet",
       "/watchlist - list watched wallets",
       "/price <token> - live DEX price lookup",
       "/alerts on|off - toggle BLARC alerts",
@@ -136,7 +139,7 @@ async function handleHelp(message) {
 async function handleScan(message, args) {
   const target = args[0];
   if (!target) {
-    await sendMessage(message.chat.id, "Usage: /scan <contract-address>");
+    await sendMessage(message.chat.id, "Usage: /scan &lt;contract-address&gt;");
     return;
   }
 
@@ -159,7 +162,7 @@ async function handleScan(message, args) {
 async function handleWatch(message, args) {
   const wallet = args[0];
   if (!wallet) {
-    await sendMessage(message.chat.id, "Usage: /watch <wallet-address>");
+    await sendMessage(message.chat.id, "Usage: /watch &lt;wallet-address&gt;");
     return;
   }
 
@@ -173,7 +176,7 @@ async function handleWatch(message, args) {
   const chat = ensureChatState(state, message.chat.id);
   if (!chat.watchlist.includes(wallet)) {
     if (chat.watchlist.length >= 20) {
-      await sendMessage(message.chat.id, "Watchlist limit reached. Remove one with /unwatch <wallet> before adding more.");
+      await sendMessage(message.chat.id, "Watchlist limit reached. Remove one with /unwatch &lt;wallet&gt; before adding more.");
       return;
     }
     chat.watchlist.push(wallet);
@@ -188,7 +191,7 @@ async function handleWatchlist(message) {
   const chat = ensureChatState(state, message.chat.id);
 
   if (chat.watchlist.length === 0) {
-    await sendMessage(message.chat.id, "Your BLARC watchlist is empty. Add one with /watch <wallet-address>.");
+    await sendMessage(message.chat.id, "Your BLARC watchlist is empty. Add one with /watch &lt;wallet-address&gt;.");
     return;
   }
 
@@ -199,7 +202,7 @@ async function handleWatchlist(message) {
 async function handleUnwatch(message, args) {
   const wallet = args[0];
   if (!wallet) {
-    await sendMessage(message.chat.id, "Usage: /unwatch <wallet-address>");
+    await sendMessage(message.chat.id, "Usage: /unwatch &lt;wallet-address&gt;");
     return;
   }
 
@@ -218,7 +221,7 @@ async function handleUnwatch(message, args) {
 async function handlePrice(message, args) {
   const target = args.join(" ");
   if (!target) {
-    await sendMessage(message.chat.id, "Usage: /price <symbol-or-contract>");
+    await sendMessage(message.chat.id, "Usage: /price &lt;symbol-or-contract&gt;");
     return;
   }
 
@@ -366,7 +369,7 @@ async function handleBroadcast(message, args) {
 
   const text = args.join(" ");
   if (!text) {
-    await sendMessage(message.chat.id, "Usage: /broadcast <message>");
+    await sendMessage(message.chat.id, "Usage: /broadcast &lt;message&gt;");
     return;
   }
 

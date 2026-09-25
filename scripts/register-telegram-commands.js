@@ -1,4 +1,7 @@
 import process from "node:process";
+import { loadEnvFile } from "../src/env.js";
+
+loadEnvFile();
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 

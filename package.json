@@ -8,7 +8,7 @@
     "start": "node src/bot.js",
     "bot": "node src/bot.js",
     "bot:commands": "node scripts/register-telegram-commands.js",
-    "check": "node --check src/bot.js && node --check src/dexscreener.js && node --check scripts/register-telegram-commands.js && node --check script.js"
+    "check": "node --check src/bot.js && node --check src/dexscreener.js && node --check src/env.js && node --check scripts/register-telegram-commands.js && node --check script.js"
   },
   "engines": {
     "node": ">=20"
