@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { buildMarketRiskLines, classifyAddress, findBestPair, formatPairSummary } from "./dexscreener.js";
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const botUsername = process.env.BLARC_BOT_USERNAME || "theBLARCbot";
@@ -101,10 +102,10 @@ async function handleStart(message) {
       "This MVP is live in safe mode: token scans, wallet watchlists, alerts settings, support links, and product onboarding.",
       "",
       "<b>Quick commands</b>",
-      "/scan <contract> - run a quick token risk checklist",
+      "/scan <contract> - run token and market risk checks",
       "/watch <wallet> - add a wallet to your watchlist",
       "/watchlist - view watched wallets",
-      "/price <token> - prepare a token price lookup",
+      "/price <token> - lookup live DEX price",
       "/settings - view your bot settings",
       "/support - official BLARC support links",
       "",
@@ -119,11 +120,11 @@ async function handleHelp(message) {
     [
       "<b>BLARC Commands</b>",
       "/start - onboarding",
-      "/scan <contract> - token risk checklist",
+      "/scan <contract> - token and market risk checks",
       "/watch <wallet> - save wallet to watch",
       "/unwatch <wallet> - remove wallet",
       "/watchlist - list watched wallets",
-      "/price <token> - price lookup placeholder",
+      "/price <token> - live DEX price lookup",
       "/alerts on|off - toggle BLARC alerts",
       "/settings - current preferences",
       "/support - official support links",
@@ -139,7 +140,7 @@ async function handleScan(message, args) {
     return;
   }
 
-  const scan = buildTokenScan(target);
+  const scan = await buildTokenScan(target);
   await sendMessage(
     message.chat.id,
     [
@@ -150,7 +151,7 @@ async function handleScan(message, args) {
       "",
       `<b>Verdict:</b> ${scan.verdict}`,
       "",
-      "MVP note: this is a local checklist, not an on-chain audit. Live liquidity, tax, holder, honeypot, and owner checks should be connected before trading.",
+      "MVP note: this is not an on-chain audit. Tax, holder distribution, honeypot simulation, and owner controls still need dedicated adapters before trading.",
     ].join("\n"),
   );
 }
@@ -221,16 +222,82 @@ async function handlePrice(message, args) {
     return;
   }
 
-  await sendMessage(
-    message.chat.id,
-    [
-      `<b>Price Lookup</b>`,
-      `<code>${escapeHtml(target)}</code>`,
-      "",
-      "The command is wired into the bot, but live market adapters are not connected yet.",
-      "Recommended next adapter: DexScreener for public token pairs, then a paid RPC/indexer for production-grade alerts.",
-    ].join("\n"),
-  );
+  await sendMessage(message.chat.id, "Checking DexScreener for the best active pair...");
+
+  try {
+    const pair = await findBestPair(target);
+    if (!pair) {
+      await sendMessage(message.chat.id, `No active DexScreener pair found for <code>${escapeHtml(target)}</code>.`);
+      return;
+    }
+
+    await sendMessage(
+      message.chat.id,
+      [`<b>BLARC Price Lookup</b>`, `<code>${escapeHtml(target)}</code>`, "", ...formatPairSummary(pair)].join("\n"),
+    );
+  } catch (error) {
+    await sendMessage(
+      message.chat.id,
+      [
+        `<b>Price Lookup Failed</b>`,
+        `DexScreener lookup failed for <code>${escapeHtml(target)}</code>.`,
+        "",
+        `Reason: ${escapeHtml(error.message)}`,
+      ].join("\n"),
+    );
+  }
+}
+
+async function buildTokenScan(target) {
+  const validation = validateAddress(target);
+  const lines = [];
+  let score = 0;
+
+  if (validation.valid) {
+    lines.push(`✅ Format: ${validation.chain} address pattern`);
+    score += 1;
+  } else {
+    lines.push(`⚠️ Format: ${escapeHtml(validation.reason)}`);
+  }
+
+  if (/^0x0{8,}/i.test(target)) {
+    lines.push("⚠️ Contract has an unusual zero-heavy prefix");
+  } else {
+    lines.push("✅ No obvious zero-prefix anomaly");
+    score += 1;
+  }
+
+  if (target.length >= 32) {
+    lines.push("✅ Address length is plausible");
+    score += 1;
+  } else {
+    lines.push("⚠️ Address is shorter than expected");
+  }
+
+  try {
+    const pair = validation.valid ? await findBestPair(target) : null;
+    const marketRisk = buildMarketRiskLines(pair);
+    lines.push(...marketRisk.lines);
+    score += marketRisk.score;
+  } catch (error) {
+    lines.push(`⚠️ Market data: DexScreener lookup failed (${escapeHtml(error.message)})`);
+  }
+
+  lines.push("⏳ Honeypot simulation: pending adapter");
+  lines.push("⏳ Ownership and tax check: pending adapter");
+
+  let verdict = "High caution. Risk checks did not pass cleanly.";
+  if (score >= 7) {
+    verdict = "Looks healthier by available checks. Still verify contract risk before trading.";
+  } else if (score >= 4) {
+    verdict = "Mixed signals. Use small size and wait for deeper risk adapters.";
+  }
+
+  return { lines, verdict };
+}
+
+function validateAddress(value) {
+  return classifyAddress(value);
 }
 
 async function handleAlerts(message, args) {
@@ -318,54 +385,6 @@ async function handleBroadcast(message, args) {
   }
 
   await sendMessage(message.chat.id, `Broadcast sent to ${sent}/${chatIds.length} chats.`);
-}
-
-function buildTokenScan(target) {
-  const validation = validateAddress(target);
-  const lines = [];
-  let score = 0;
-
-  if (validation.valid) {
-    lines.push(`✅ Format: ${validation.chain} address pattern`);
-    score += 1;
-  } else {
-    lines.push(`⚠️ Format: ${escapeHtml(validation.reason)}`);
-  }
-
-  if (/^0x0{8,}/i.test(target)) {
-    lines.push("⚠️ Contract has an unusual zero-heavy prefix");
-  } else {
-    lines.push("✅ No obvious zero-prefix anomaly");
-    score += 1;
-  }
-
-  if (target.length >= 32) {
-    lines.push("✅ Address length is plausible");
-    score += 1;
-  } else {
-    lines.push("⚠️ Address is shorter than expected");
-  }
-
-  lines.push("⏳ Live liquidity check: pending adapter");
-  lines.push("⏳ Honeypot simulation: pending adapter");
-  lines.push("⏳ Ownership and tax check: pending adapter");
-
-  const verdict =
-    score >= 3 ? "Format looks plausible. Wait for live risk adapters before trading." : "High caution. Format checks did not pass cleanly.";
-
-  return { lines, verdict };
-}
-
-function validateAddress(value) {
-  if (/^0x[a-fA-F0-9]{40}$/.test(value)) {
-    return { valid: true, chain: "EVM" };
-  }
-
-  if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(value)) {
-    return { valid: true, chain: "Solana/Base58" };
-  }
-
-  return { valid: false, reason: "expected EVM 0x address or Solana-style base58 address" };
 }
 
 async function telegram(method, payload) {

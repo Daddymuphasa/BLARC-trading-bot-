@@ -19,11 +19,11 @@ BLARC is an Arc-native Telegram DeFi trading bot project with a responsive produ
 
 - `/start` onboarding.
 - `/help` command list.
-- `/scan <contract>` local token risk checklist.
+- `/scan <contract>` token format checks plus DexScreener liquidity, volume, and pair-age signals.
 - `/watch <wallet>` wallet watchlist.
 - `/watchlist` saved wallets.
 - `/unwatch <wallet>` remove wallet.
-- `/price <token>` market adapter placeholder.
+- `/price <token>` live DexScreener pair lookup.
 - `/alerts on|off` alert preference.
 - `/settings` user settings.
 - `/support` official links and anti-phishing reminder.
@@ -42,6 +42,7 @@ Security-minded implementation choices:
 - Static assets are local under `assets/`.
 - Bot runtime state is stored locally under `data/` and JSON state files are gitignored.
 - Trading execution and wallet custody are intentionally not enabled.
+- Market lookups use DexScreener's public read-only API; responses are informational, not trading advice.
 
 For any future trading backend, add threat modeling before implementation. At minimum, define key custody boundaries, wallet encryption, confirmation flows, rate limiting, anti-phishing protections, logging redaction, abuse monitoring, and incident-response procedures.
 
@@ -81,5 +82,6 @@ No npm install step is needed right now because the bot uses Node.js built-in AP
 - `script.js` - tab switching, FAQ toggles, sticky header state.
 - `assets/` - BLARC mascot and logo images supplied for the brand.
 - `src/bot.js` - Telegram bot MVP.
+- `src/dexscreener.js` - read-only DexScreener market data adapter.
 - `scripts/register-telegram-commands.js` - registers command hints with Telegram.
 - `.env.example` - required bot environment variables.
