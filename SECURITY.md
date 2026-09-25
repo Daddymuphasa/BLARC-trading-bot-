@@ -2,7 +2,7 @@
 
 ## Current Scope
 
-The current project is a static website for BLARC. It does not provide live trading, wallet creation, custody, authentication, or Telegram bot command execution.
+The current project includes a static website and a safe-mode Telegram bot MVP for BLARC. It does not provide live trading, wallet creation, private-key custody, authentication, or transaction execution.
 
 ## Public Frontend Requirements
 
@@ -11,6 +11,16 @@ The current project is a static website for BLARC. It does not provide live trad
 - Keep Content Security Policy restrictive by default.
 - Keep all production assets local or loaded only from approved, integrity-reviewed origins.
 - Avoid embedding hidden trackers or unreviewed analytics.
+
+## Telegram Bot MVP Requirements
+
+- Never ask for seed phrases, private keys, Telegram login codes, exchange keys, or recovery material.
+- Keep bot tokens in environment variables only.
+- Do not commit `.env` files or runtime JSON state.
+- Treat all user-submitted contract and wallet addresses as untrusted text.
+- Keep HTML escaping enabled for bot replies.
+- Restrict admin-only commands with numeric Telegram user IDs.
+- Rate-limit future high-volume features before enabling production alerts.
 
 ## Future Bot And Trading Backend Requirements
 

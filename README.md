@@ -1,8 +1,10 @@
-# BLARC Trading Bot Landing Page
+# BLARC Trading Bot
 
-BLARC is a static, responsive product site for an Arc-native Telegram DeFi trading bot concept. It is inspired by the feature depth of Maestro Bots while using original BLARC branding, copy, layout, and assets.
+BLARC is an Arc-native Telegram DeFi trading bot project with a responsive product site and a safe Telegram bot MVP. It is inspired by the feature depth of Maestro Bots while using original BLARC branding, copy, layout, and assets.
 
 ## What Is Included
+
+### Website
 
 - Hero section with BLARC mascot branding and Telegram launch CTA.
 - Supported-chain marquee.
@@ -13,9 +15,23 @@ BLARC is a static, responsive product site for an Arc-native Telegram DeFi tradi
 - Premium offer section.
 - Documentation FAQ and community links.
 
+### Telegram Bot MVP
+
+- `/start` onboarding.
+- `/help` command list.
+- `/scan <contract>` local token risk checklist.
+- `/watch <wallet>` wallet watchlist.
+- `/watchlist` saved wallets.
+- `/unwatch <wallet>` remove wallet.
+- `/price <token>` market adapter placeholder.
+- `/alerts on|off` alert preference.
+- `/settings` user settings.
+- `/support` official links and anti-phishing reminder.
+- `/broadcast <message>` admin-only announcements.
+
 ## Security Notes
 
-This repository is currently a static frontend. It does not collect private keys, seed phrases, Telegram login codes, analytics identifiers, or wallet credentials.
+This repository currently includes a static frontend and a safe-mode Telegram bot. It does not collect private keys, seed phrases, Telegram login codes, analytics identifiers, exchange credentials, or wallet credentials.
 
 Security-minded implementation choices:
 
@@ -24,6 +40,8 @@ Security-minded implementation choices:
 - A restrictive Content Security Policy in `index.html`.
 - External links use `rel="noopener"`.
 - Static assets are local under `assets/`.
+- Bot runtime state is stored locally under `data/` and JSON state files are gitignored.
+- Trading execution and wallet custody are intentionally not enabled.
 
 For any future trading backend, add threat modeling before implementation. At minimum, define key custody boundaries, wallet encryption, confirmation flows, rate limiting, anti-phishing protections, logging redaction, abuse monitoring, and incident-response procedures.
 
@@ -37,9 +55,31 @@ python -m http.server 4173
 
 Then visit `http://localhost:4173`.
 
+## Run The Telegram Bot
+
+1. Create a bot with BotFather. The current official handle is `@theBLARCbot`.
+2. Copy `.env.example` to `.env` and set `TELEGRAM_BOT_TOKEN`.
+3. In your shell, export the variables from `.env`.
+4. Run:
+
+```bash
+npm start
+```
+
+Register Telegram command suggestions:
+
+```bash
+npm run bot:commands
+```
+
+No npm install step is needed right now because the bot uses Node.js built-in APIs.
+
 ## Files
 
 - `index.html` - page structure and content.
 - `styles.css` - responsive visual system.
 - `script.js` - tab switching, FAQ toggles, sticky header state.
 - `assets/` - BLARC mascot and logo images supplied for the brand.
+- `src/bot.js` - Telegram bot MVP.
+- `scripts/register-telegram-commands.js` - registers command hints with Telegram.
+- `.env.example` - required bot environment variables.

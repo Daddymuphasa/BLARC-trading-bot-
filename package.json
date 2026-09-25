@@ -1,0 +1,16 @@
+{
+  "name": "blarc-trading-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BLARC Telegram bot MVP and landing page.",
+  "type": "module",
+  "scripts": {
+    "start": "node src/bot.js",
+    "bot": "node src/bot.js",
+    "bot:commands": "node scripts/register-telegram-commands.js",
+    "check": "node --check src/bot.js && node --check scripts/register-telegram-commands.js && node --check script.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
