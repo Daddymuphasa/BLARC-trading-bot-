@@ -21,6 +21,8 @@ The current project includes a static website and a safe-mode Telegram bot MVP f
 - Keep HTML escaping enabled for bot replies.
 - Restrict admin-only commands with numeric Telegram user IDs.
 - Rate-limit future high-volume features before enabling production alerts.
+- Store public wallet addresses only for the read-only wallet feature.
+- Do not add bot-side signing, generated wallets, or private-key import without a separate key-management design and security review.
 
 ## Future Bot And Trading Backend Requirements
 

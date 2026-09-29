@@ -28,6 +28,10 @@ if (!token) {
 const commands = {
   start: handleStart,
   help: handleHelp,
+  connect: handleConnect,
+  wallet: handleWallet,
+  wallets: handleWallets,
+  remove_wallet: handleRemoveWallet,
   scan: handleScan,
   watch: handleWatch,
   watchlist: handleWatchlist,
@@ -105,6 +109,9 @@ async function handleStart(message) {
       "This MVP is live in safe mode: token scans, wallet watchlists, alerts settings, support links, and product onboarding.",
       "",
       "<b>Quick commands</b>",
+      "/connect - learn the safe wallet connection flow",
+      "/wallet &lt;address&gt; - add a read-only wallet",
+      "/wallets - view saved wallets",
       "/scan &lt;contract&gt; - run token and market risk checks",
       "/watch &lt;wallet&gt; - add a wallet to your watchlist",
       "/watchlist - view watched wallets",
@@ -123,6 +130,10 @@ async function handleHelp(message) {
     [
       "<b>BLARC Commands</b>",
       "/start - onboarding",
+      "/connect - safe wallet connection instructions",
+      "/wallet &lt;address&gt; - add a read-only wallet",
+      "/wallets - list saved wallets",
+      "/remove_wallet &lt;address&gt; - remove a saved wallet",
       "/scan &lt;contract&gt; - token and market risk checks",
       "/watch &lt;wallet&gt; - save wallet to watch",
       "/unwatch &lt;wallet&gt; - remove wallet",
@@ -134,6 +145,51 @@ async function handleHelp(message) {
       "/about - BLARC product status",
     ].join("\n"),
   );
+}
+
+async function handleConnect(message) {
+  await sendMessage(
+    message.chat.id,
+    [
+      "<b>Connect Wallet - Safe Mode</b>",
+      "",
+      "BLARC currently stores public wallet addresses only. This lets the bot monitor wallets and prepare alerts without holding funds or signing transactions.",
+      "",
+      "Use:",
+      "/wallet &lt;public-wallet-address&gt;",
+      "",
+      "Supported now:",
+      "✅ EVM addresses",
+      "✅ Solana-style base58 addresses",
+      "✅ Read-only wallet lists",
+      "✅ Explorer links",
+      "",
+      "Not enabled yet:",
+      "❌ Seed phrase import",
+      "❌ Private key import",
+      "❌ Bot-signed trades",
+      "❌ Wallet custody",
+      "",
+      "Security rule: never send BLARC your seed phrase or private key.",
+    ].join("\n"),
+  );
+}
+
+async function handleWallet(message, args) {
+  return addWallet(message, args, {
+    emptyUsage: "Usage: /wallet &lt;public-wallet-address&gt;",
+    savedPrefix: "Read-only wallet saved",
+  });
+}
+
+async function handleWallets(message) {
+  return listWallets(message);
+}
+
+async function handleRemoveWallet(message, args) {
+  return removeWallet(message, args, {
+    emptyUsage: "Usage: /remove_wallet &lt;public-wallet-address&gt;",
+  });
 }
 
 async function handleScan(message, args) {
@@ -160,9 +216,16 @@ async function handleScan(message, args) {
 }
 
 async function handleWatch(message, args) {
+  return addWallet(message, args, {
+    emptyUsage: "Usage: /watch &lt;wallet-address&gt;",
+    savedPrefix: "Watching",
+  });
+}
+
+async function addWallet(message, args, options) {
   const wallet = args[0];
   if (!wallet) {
-    await sendMessage(message.chat.id, "Usage: /watch &lt;wallet-address&gt;");
+    await sendMessage(message.chat.id, options.emptyUsage);
     return;
   }
 
@@ -176,33 +239,73 @@ async function handleWatch(message, args) {
   const chat = ensureChatState(state, message.chat.id);
   if (!chat.watchlist.includes(wallet)) {
     if (chat.watchlist.length >= 20) {
-      await sendMessage(message.chat.id, "Watchlist limit reached. Remove one with /unwatch &lt;wallet&gt; before adding more.");
+      await sendMessage(message.chat.id, "Wallet limit reached. Remove one with /remove_wallet &lt;wallet&gt; before adding more.");
       return;
     }
     chat.watchlist.push(wallet);
     await saveState(state);
   }
 
-  await sendMessage(message.chat.id, `Watching <code>${escapeHtml(wallet)}</code>\nUse /watchlist to view saved wallets.`);
+  const explorer = buildExplorerLink(wallet, validation.chain);
+  await sendMessage(
+    message.chat.id,
+    [
+      `${options.savedPrefix}: <code>${escapeHtml(wallet)}</code>`,
+      `Network type: <b>${escapeHtml(validation.chain)}</b>`,
+      explorer ? `Explorer: ${escapeHtml(explorer)}` : "",
+      "",
+      "This is read-only. BLARC cannot move funds from this wallet.",
+      "Use /wallets to view saved wallets.",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
 }
 
 async function handleWatchlist(message) {
+  return listWallets(message);
+}
+
+async function listWallets(message) {
   const state = await loadState();
   const chat = ensureChatState(state, message.chat.id);
 
   if (chat.watchlist.length === 0) {
-    await sendMessage(message.chat.id, "Your BLARC watchlist is empty. Add one with /watch &lt;wallet-address&gt;.");
+    await sendMessage(message.chat.id, "Your BLARC wallet list is empty. Add one with /wallet &lt;public-wallet-address&gt;.");
     return;
   }
 
-  const wallets = chat.watchlist.map((wallet, index) => `${index + 1}. <code>${escapeHtml(wallet)}</code>`);
-  await sendMessage(message.chat.id, [`<b>Your watched wallets</b>`, "", ...wallets].join("\n"));
+  const wallets = chat.watchlist.map((wallet, index) => {
+    const validation = validateAddress(wallet);
+    const explorer = buildExplorerLink(wallet, validation.chain);
+    return [`${index + 1}. <code>${escapeHtml(wallet)}</code>`, `   ${escapeHtml(validation.chain)}${explorer ? ` - ${escapeHtml(explorer)}` : ""}`].join(
+      "\n",
+    );
+  });
+
+  await sendMessage(
+    message.chat.id,
+    [
+      "<b>Your read-only BLARC wallets</b>",
+      "",
+      ...wallets,
+      "",
+      "Remove one with /remove_wallet &lt;address&gt;.",
+      "These are public addresses only. No private keys are stored.",
+    ].join("\n"),
+  );
 }
 
 async function handleUnwatch(message, args) {
+  return removeWallet(message, args, {
+    emptyUsage: "Usage: /unwatch &lt;wallet-address&gt;",
+  });
+}
+
+async function removeWallet(message, args, options) {
   const wallet = args[0];
   if (!wallet) {
-    await sendMessage(message.chat.id, "Usage: /unwatch &lt;wallet-address&gt;");
+    await sendMessage(message.chat.id, options.emptyUsage);
     return;
   }
 
@@ -214,7 +317,7 @@ async function handleUnwatch(message, args) {
 
   await sendMessage(
     message.chat.id,
-    before === chat.watchlist.length ? "That wallet was not on your watchlist." : `Removed <code>${escapeHtml(wallet)}</code>.`,
+    before === chat.watchlist.length ? "That wallet was not saved." : `Removed <code>${escapeHtml(wallet)}</code>.`,
   );
 }
 
@@ -301,6 +404,18 @@ async function buildTokenScan(target) {
 
 function validateAddress(value) {
   return classifyAddress(value);
+}
+
+function buildExplorerLink(wallet, chain) {
+  if (chain === "EVM") {
+    return `https://etherscan.io/address/${wallet}`;
+  }
+
+  if (chain === "Solana/Base58") {
+    return `https://solscan.io/account/${wallet}`;
+  }
+
+  return "";
 }
 
 async function handleAlerts(message, args) {

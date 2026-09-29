@@ -19,10 +19,12 @@ BLARC is an Arc-native Telegram DeFi trading bot project with a responsive produ
 
 - `/start` onboarding.
 - `/help` command list.
+- `/connect` safe wallet connection instructions.
+- `/wallet <address>` add a read-only public wallet.
+- `/wallets` saved read-only wallets with explorer links.
+- `/remove_wallet <address>` remove a saved wallet.
 - `/scan <contract>` token format checks plus DexScreener liquidity, volume, and pair-age signals.
-- `/watch <wallet>` wallet watchlist.
-- `/watchlist` saved wallets.
-- `/unwatch <wallet>` remove wallet.
+- `/watch`, `/watchlist`, and `/unwatch` compatibility aliases.
 - `/price <token>` live DexScreener pair lookup.
 - `/alerts on|off` alert preference.
 - `/settings` user settings.
@@ -43,6 +45,7 @@ Security-minded implementation choices:
 - Bot runtime state is stored locally under `data/` and JSON state files are gitignored.
 - Trading execution and wallet custody are intentionally not enabled.
 - Market lookups use DexScreener's public read-only API; responses are informational, not trading advice.
+- Wallet features store public addresses only. BLARC does not store private keys, seed phrases, or signing permissions.
 
 For any future trading backend, add threat modeling before implementation. At minimum, define key custody boundaries, wallet encryption, confirmation flows, rate limiting, anti-phishing protections, logging redaction, abuse monitoring, and incident-response procedures.
 
