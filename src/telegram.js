@@ -42,10 +42,11 @@ export async function sendPhoto(chatId, png, caption) {
   return postPhoto(chatId, new Blob([png], { type: "image/png" }), "blarc-connect.png", caption);
 }
 
-export async function sendPhotoFile(chatId, filePath, caption) {
+export async function sendPhotoFile(chatId, filePath, caption, options = {}) {
   const bytes = await readFile(filePath);
   const name = path.basename(filePath);
-  return postPhoto(chatId, new Blob([bytes], { type: "image/jpeg" }), name, caption, { parseMode: "HTML" });
+  const type = filePath.endsWith(".png") ? "image/png" : "image/jpeg";
+  return postPhoto(chatId, new Blob([bytes], { type }), name, caption, { parseMode: "HTML", ...options });
 }
 
 export async function sendGuide(chatId, fileName, caption) {
@@ -68,6 +69,9 @@ async function postPhoto(chatId, blob, filename, caption, options = {}) {
   }
   if (options.parseMode) {
     form.append("parse_mode", options.parseMode);
+  }
+  if (options.replyMarkup) {
+    form.append("reply_markup", JSON.stringify(options.replyMarkup));
   }
   form.append("photo", blob, filename);
   const response = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {

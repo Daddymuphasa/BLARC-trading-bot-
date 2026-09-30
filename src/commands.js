@@ -16,6 +16,7 @@ import { adminIds, maxPriceWatches, supportUrl, updatesUrl } from "./config.js";
 import { ensureChatState, mutateState, readState, upsertChat } from "./state.js";
 import { escapeHtml, sendGuide, sendMessage, sendPhoto, sendPlain, sleep } from "./telegram.js";
 import { handleAlerts, handleUnwatch, handleWatch, handleWatchlist } from "./alerts.js";
+import { ensurePairCard } from "./cards.js";
 import { executeSwap, swapApiKey } from "./swap.js";
 import { formatCopyStatus, handleAuto, handleCopy, handleCopyCallback, handleCopies, handleGoal, handleRisk, handleUncopy } from "./copy.js";
 import process from "node:process";
@@ -580,6 +581,10 @@ async function handlePrice(message, args) {
     if (!pair) {
       await sendMessage(message.chat.id, `No active DexScreener pair found for <code>${escapeHtml(target)}</code>.`);
       return;
+    }
+
+    if (classifyAddress(target).valid) {
+      await ensurePairCard(pair);
     }
 
     await sendMessage(

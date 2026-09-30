@@ -10,3 +10,5 @@ data/*.json
 data/*.tmp
 walletconnect.db
 walletconnect.db.*
+data/cards/*
+!data/cards/.gitkeep

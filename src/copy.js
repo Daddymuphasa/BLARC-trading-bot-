@@ -2,7 +2,8 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { classifyAddress } from "./dexscreener.js";
 import { copyPollIntervalMs, evmRpcUrl, maxCopyWatches, solanaRpcUrl } from "./config.js";
 import { ensureChatState, mutateState, readState } from "./state.js";
-import { escapeHtml, sendGuide, sendMessage, sleep, telegram } from "./telegram.js";
+import { savedCardForTrade } from "./cards.js";
+import { escapeHtml, sendGuide, sendMessage, sendPhotoFile, sleep, telegram } from "./telegram.js";
 import { executeSwap } from "./swap.js";
 import { chainIdNumber, isEvmAddress, looksLikeSecretMaterial, sanitizeWallet } from "./wallet.js";
 
@@ -680,22 +681,35 @@ async function deliverTrade(chatId, address, trade) {
   const text = formatTradeText(trade, tradeTier, chat?.riskMax);
   if (watch.auto) {
     const reply = await performCopy(chatId, trade);
-    await sendMessage(chatId, `${text}\n\n${reply}`);
+    await sendTradeNotice(chatId, trade, `${text}\n\n${reply}`);
     await markSeen([{ chatId, watch }], trade.id);
     return;
   }
   if (!trade.amount) {
-    await sendMessage(chatId, `${text}\n\nThe sell amount could not be read, so the copy was not sent.`);
+    await sendTradeNotice(chatId, trade, `${text}\n\nThe sell amount could not be read, so the copy was not sent.`);
     await markSeen([{ chatId, watch }], trade.id);
     return;
   }
   const pendingId = await savePending(chatId, trade);
-  await sendMessage(chatId, text, {
+  await sendTradeNotice(chatId, trade, text, {
     reply_markup: {
       inline_keyboard: [[{ text: "Copy", callback_data: `cp:${pendingId}` }, { text: "Skip", callback_data: `sk:${pendingId}` }]],
     },
   });
   await markSeen([{ chatId, watch }], trade.id);
+}
+
+async function sendTradeNotice(chatId, trade, text, options) {
+  const card = text.length <= 900 ? await savedCardForTrade(trade) : null;
+  if (card) {
+    try {
+      await sendPhotoFile(chatId, card, text, { replyMarkup: options?.reply_markup });
+      return;
+    } catch (error) {
+      console.error(`Buy notice card failed for chat ${chatId}: ${error.message}`);
+    }
+  }
+  await sendMessage(chatId, text, options);
 }
 
 async function performCopy(chatId, trade) {

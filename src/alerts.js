@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { findTrackedPair, formatUsd } from "./dexscreener.js";
+import { classifyAddress, findTrackedPair, formatUsd } from "./dexscreener.js";
 import { maxPriceWatches, priceCheckGapMs, priceCheckIntervalMs } from "./config.js";
 import { ensureChatState, mutateState, readState } from "./state.js";
-import { escapeHtml, sendMessage, sleep } from "./telegram.js";
+import { ensurePairCard, savedCardPath } from "./cards.js";
+import { escapeHtml, sendMessage, sendPhotoFile, sleep } from "./telegram.js";
 
 export async function handleWatch(message, args) {
   const parsed = parseWatchCommand(args);
@@ -174,6 +175,10 @@ export async function handleWatch(message, args) {
   if (outcome.status === "range") {
     await sendMessage(message.chat.id, "The above target must be higher than the below target. Nothing was changed.");
     return;
+  }
+
+  if (pair && classifyAddress(parsed.query).valid) {
+    await ensurePairCard(pair);
   }
 
   await sendMessage(message.chat.id, formatWatchConfirmation(outcome.watch, outcome.status, outcome.alerts));
@@ -396,7 +401,7 @@ async function runPriceChecks() {
 
   for (const event of outcome.events) {
     try {
-      await sendMessage(event.chatId, formatPriceAlert(event));
+      await deliverPriceAlert(event);
     } catch (error) {
       console.error(`Price alert delivery failed for chat ${event.chatId}: ${error.message}`);
       continue;
@@ -728,6 +733,30 @@ function formatWatchConfirmation(watch, status, alertsOn) {
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+async function deliverPriceAlert(event) {
+  const card = await savedCardPath(event.watch?.chainId, event.watch?.tokenAddress);
+  if (card) {
+    try {
+      await sendPhotoFile(event.chatId, card, shortPriceCaption(event));
+      return;
+    } catch (error) {
+      console.error(`Price alert card failed for chat ${event.chatId}: ${error.message}`);
+    }
+  }
+  await sendMessage(event.chatId, formatPriceAlert(event));
+}
+
+function shortPriceCaption(event) {
+  const watch = event.watch;
+  const label = watch.symbol || watch.query;
+  const direction = event.direction === "above" ? "above" : "below";
+  return [
+    `<b>${escapeHtml(label)}</b> crossed ${direction} ${formatUsd(event.target)}`,
+    `Now ${formatUsd(event.price)}`,
+    "Fired once. /watch rearm",
+  ].join("\n");
 }
 
 function formatPriceAlert(event) {

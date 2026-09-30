@@ -56,6 +56,7 @@ Security-minded implementation choices:
 - The bot never holds a key. A swap signature is requested only through WalletConnect, and only when the 1% fee is inside that transaction.
 - Market lookups use DexScreener's public read-only API; responses are informational, not trading advice.
 - Price alerts poll DexScreener about once a minute and send one Telegram message per target cross. They do not trade, sign, or hold keys.
+- A pasted contract on `/price` or `/watch` saves one pair card under `data/cards/<chainId>-<tokenAddress>.jpg`. Later price alerts and existing buy notices reuse that file. Generated cards are gitignored so a persistent `data` volume keeps them.
 - Wallet features store public addresses only. BLARC does not store private keys, seed phrases, or signing permissions.
 - WalletConnect relay keys stay in process memory. They are not written to `data/blarc-state.json`. A new wallet is created only in the user's own wallet app.
 - The 1% fee is not custody. It is part of the swap transaction the user signs, or the swap is refused.
@@ -97,7 +98,7 @@ docker compose up -d --build
 
 Later starts can use `docker compose up -d`.
 
-Runtime state is `data/blarc-state.json` (saved wallets, watches, and settings). That directory must persist across restarts and deploys. The Compose file mounts `./data` for this. Do not delete it if you want that state to survive. Back it up with the host.
+Runtime state is `data/blarc-state.json` (saved wallets, watches, and settings). Pair cards, when built, are `data/cards/<chainId>-<tokenAddress>.jpg`. That directory must persist across restarts and deploys. The Compose file mounts `./data` for this. Do not delete it if you want that state to survive. Back it up with the host.
 
 Optional: register Telegram command suggestions from a machine that has the filled-in `.env`:
 
@@ -123,6 +124,7 @@ The wallet packages are `@walletconnect/sign-client` and `qrcode`. Swaps are use
 - `src/swap.js` - 0x swap quote with the 1% fee inside the transaction, or a refusal.
 - `src/copy.js` - public-wallet copy watches. Execution only calls the fee-aware swap.
 - `src/dexscreener.js` - read-only DexScreener market data adapter.
+- `src/cards.js` - one JPEG card per chain and token contract, built with sharp from the DexScreener pair and the local BLARC mascot.
 - `src/env.js` - loads `.env` from the working directory without overriding existing variables.
 - `scripts/register-telegram-commands.js` - registers command hints with Telegram.
 - `.env.example` - environment variable names. Copy to `.env` and fill in locally.
