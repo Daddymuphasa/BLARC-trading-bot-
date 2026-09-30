@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { classifyAddress } from "./dexscreener.js";
 import { copyPollIntervalMs, evmRpcUrl, maxCopyWatches, solanaRpcUrl } from "./config.js";
 import { ensureChatState, mutateState, readState } from "./state.js";
-import { escapeHtml, sendMessage, sleep, telegram } from "./telegram.js";
+import { escapeHtml, sendGuide, sendMessage, sleep, telegram } from "./telegram.js";
 import { executeSwap } from "./swap.js";
 import { chainIdNumber, isEvmAddress, looksLikeSecretMaterial, sanitizeWallet } from "./wallet.js";
 
@@ -38,6 +38,7 @@ export async function handleCopy(message, args) {
   const chatId = message.chat.id;
   const text = args.join(" ").trim();
   if (!text) {
+    await sendGuide(chatId, "copy.jpg", "Paste a public wallet. Tap Copy or Skip. Auto still asks you to sign.");
     await sendMessage(chatId, "Paste a public wallet.\n/copy &lt;address&gt;\nSolana or EVM is detected. Seeds and private keys are rejected.");
     return;
   }
@@ -55,6 +56,7 @@ export async function handleCopy(message, args) {
 export async function handleCopies(message) {
   const state = await readState();
   const chat = state.chats?.[String(message.chat.id)];
+  await sendGuide(message.chat.id, "copy.jpg", "Paste a public wallet. Tap Copy or Skip. Auto still asks you to sign.");
   await sendMessage(message.chat.id, formatCopyStatus(chat, { list: true }));
 }
 

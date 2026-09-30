@@ -14,7 +14,7 @@ import {
 import { buildMarketRiskLines, classifyAddress, findBestPair, formatPairSummary } from "./dexscreener.js";
 import { adminIds, maxPriceWatches, supportUrl, updatesUrl } from "./config.js";
 import { ensureChatState, mutateState, readState, upsertChat } from "./state.js";
-import { escapeHtml, sendMessage, sendPhoto, sendPlain, sleep } from "./telegram.js";
+import { escapeHtml, sendGuide, sendMessage, sendPhoto, sendPlain, sleep } from "./telegram.js";
 import { handleAlerts, handleUnwatch, handleWatch, handleWatchlist } from "./alerts.js";
 import { executeSwap, swapApiKey } from "./swap.js";
 import { formatCopyStatus, handleAuto, handleCopy, handleCopyCallback, handleCopies, handleGoal, handleRisk, handleUncopy } from "./copy.js";
@@ -99,62 +99,62 @@ function parseCommand(text) {
 async function handleStart(message) {
   const name = escapeHtml(message.from?.first_name || "trader");
   await upsertChat(message.chat.id, { alerts: true });
+  await sendGuide(message.chat.id, "welcome.jpg", "Welcome. Paste a wallet, set an alert, or connect to trade.");
   await sendMessage(
     message.chat.id,
     [
       `Welcome to <b>BLARC</b>, ${name}.`,
+      "Paste a wallet to copy a trader. Set a price alert. Connect your wallet to trade.",
       "",
-      "This MVP is live in safe mode: token scans, read-only wallets, DexScreener price alerts, support links, and product onboarding.",
+      "/connect — pair your wallet",
+      "/disconnect — forget the address",
+      "/fee — 1% fee wallet",
+      "/swap — sign a swap",
+      "/wallet — save a public address",
+      "/copy — watch a trader",
+      "/wallets — saved addresses",
+      "/scan — token check",
+      "/watch — price alert",
+      "/watchlist — your alerts",
+      "/price — live price",
+      "/settings — preferences",
+      "/support — official links",
       "",
-      "<b>Quick commands</b>",
-      "/connect - pair a wallet you control (WalletConnect)",
-      "/disconnect - forget the connected public address",
-      "/fee - show the 1% in-swap fee wallet",
-      "/swap &lt;amount&gt; &lt;from&gt; &lt;to&gt; - sign a swap with the 1% fee inside it, or nothing is sent",
-      "/wallet &lt;address&gt; - add a read-only wallet",
-      "/copy &lt;address&gt; - watch a public wallet. Copy or Skip when it trades",
-      "/wallets - view saved wallets",
-      "/scan &lt;contract&gt; - run token and market risk checks",
-      "/watch &lt;token&gt; above &lt;usd&gt; - alert when price crosses a target",
-      "/watchlist - token watches, last price, and targets",
-      "/price &lt;token&gt; - lookup live DEX price",
-      "/settings - view your bot settings",
-      "/support - official BLARC support links",
-      "",
-      "BLARC will never ask for seed phrases or private keys.",
+      "BLARC never asks for a seed phrase or private key.",
     ].join("\n"),
   );
 }
 
 async function handleHelp(message) {
+  await sendGuide(message.chat.id, "help.jpg", "Help: /copy, /alerts, /swap, /goal, /risk, /fee.");
   await sendMessage(
     message.chat.id,
     [
-      "<b>BLARC Commands</b>",
-      "/start - onboarding",
-      "/connect - pair your own wallet with WalletConnect",
-      "/disconnect - forget the connected public address",
-      "/fee - show the public 1% fee wallet",
-      "/swap &lt;amount&gt; &lt;from&gt; &lt;to&gt; - sign a swap only if the 1% fee is inside that transaction",
-      "/wallet &lt;address&gt; - add a read-only wallet",
-      "/copy &lt;address&gt; - watch a public wallet",
-      "/copies - list copy watches, goal, and risk",
-      "/uncopy &lt;address&gt; - stop watching a wallet",
-      "/auto on|off - auto-request a signature for one watched wallet",
-      "/goal &lt;percent&gt; - store a weekly profit goal",
-      "/risk low|average|high|daredevil - pick a risk tier",
-      "/wallets - list saved wallets",
-      "/remove_wallet &lt;address&gt; - remove a saved wallet",
-      "/scan &lt;contract&gt; - token and market risk checks",
-      "/watch &lt;token&gt; [above &lt;usd&gt;] [below &lt;usd&gt;] - watch a token price",
-      "/watch &lt;token&gt; rearm - arm fired targets again",
-      "/unwatch &lt;token&gt; - remove a token price watch",
-      "/watchlist - token, last price, and above/below targets",
-      "/price &lt;token&gt; - live DEX price lookup",
-      "/alerts on|off - turn price alert delivery on or off",
-      "/settings - current preferences",
-      "/support - official support links",
-      "/about - BLARC product status",
+      "<b>BLARC</b>",
+      "/start — welcome",
+      "/connect — pair wallet",
+      "/disconnect — forget address",
+      "/fee — 1% fee wallet",
+      "/swap — sign a swap",
+      "/wallet — save address",
+      "/wallets — list addresses",
+      "/remove_wallet — remove address",
+      "/copy — watch a wallet",
+      "/copies — your watches",
+      "/uncopy — stop a watch",
+      "/auto — auto-ask to sign",
+      "/goal — weekly goal",
+      "/risk — risk tier",
+      "/scan — token check",
+      "/watch — price target",
+      "/watch rearm — arm targets again",
+      "/unwatch — remove target",
+      "/watchlist — targets",
+      "/price — live price",
+      "/alerts — alerts on or off",
+      "/settings — preferences",
+      "/support — links",
+      "/about — status",
     ].join("\n"),
   );
 }
@@ -404,6 +404,11 @@ async function handleSwap(message, args) {
     return;
   }
   if (parsed.error) {
+    await sendGuide(
+      message.chat.id,
+      "trade.jpg",
+      "You sign every swap. If the 1% fee cannot be included, nothing is sent.",
+    );
     await sendMessage(
       message.chat.id,
       "Usage: /swap &lt;amount&gt; &lt;from-token&gt; &lt;to-token&gt;\nExample: /swap 100 USDC ETH\nThe 1% fee has to be inside the transaction you sign. Otherwise nothing is sent.",
