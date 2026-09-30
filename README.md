@@ -107,9 +107,15 @@ The wallet packages are `@walletconnect/sign-client` and `qrcode`. Live swaps ar
 - `styles.css` - responsive visual system.
 - `script.js` - tab switching, FAQ toggles, sticky header state.
 - `assets/` - BLARC mascot and logo images supplied for the brand.
-- `src/bot.js` - Telegram bot MVP.
+- `src/bot.js` - thin entry: wires config, state, commands, and the price-alert loop, then polls Telegram.
+- `src/config.js` - environment reads and runtime constants.
+- `src/state.js` - local JSON state load and save.
+- `src/telegram.js` - Telegram send and getUpdates helpers.
+- `src/commands.js` - command handlers.
+- `src/alerts.js` - price-watch commands and the check loop.
 - `src/wallet.js` - WalletConnect pairing, public-address session, and the 1% swap preview.
 - `src/dexscreener.js` - read-only DexScreener market data adapter.
+- `src/env.js` - loads `.env` from the working directory without overriding existing variables.
 - `scripts/register-telegram-commands.js` - registers command hints with Telegram.
 - `.env.example` - environment variable names. Copy to `.env` and fill in locally.
 - `Dockerfile` - Node 20 image that runs `node src/bot.js`.
