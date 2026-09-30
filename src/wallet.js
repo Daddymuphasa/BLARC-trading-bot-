@@ -169,6 +169,16 @@ export function looksLikeSecretMaterial(text) {
   if ([12, 15, 18, 24].includes(words.length) && words.every((word) => /^[a-z]{3,8}$/.test(word))) {
     return true;
   }
+  const compact = raw.replace(/\s+/g, "");
+  if (/^[1-9A-HJ-NP-Za-km-z]{80,}$/.test(compact)) {
+    return true;
+  }
+  if (compact.startsWith("[") && compact.endsWith("]")) {
+    const ints = compact.match(/\d+/g) || [];
+    if (ints.length >= 32 && ints.length <= 128 && ints.every((part) => Number(part) <= 255)) {
+      return true;
+    }
+  }
   return false;
 }
 

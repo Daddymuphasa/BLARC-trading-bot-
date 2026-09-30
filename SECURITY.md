@@ -24,6 +24,8 @@ The current project includes a static website and a Telegram bot for BLARC. It d
 - Store public wallet addresses only. WalletConnect state on disk is limited to the approved public address and chain id for that chat.
 - Keep WalletConnect relay key material in process memory. Do not write it to `data/` or logs.
 - Do not add bot-side signing, generated wallets, or private-key import. Swaps are `eth_sendTransaction` requests on the user's WalletConnect session, and only after the 1% fee is checked inside the quoted transaction.
+- Copy watches store public addresses only. Reject seed phrases and private keys. Auto-copy may request the same user signature and must not sign. If the fee-aware builder refuses, do not send another transaction.
+- Do not invent account balances, profit percentages, or risk-reward ratios. A weekly goal is a stored percent. A risk label requires a real size signal such as sell amount versus a user-set max.
 
 ## Future Bot And Trading Backend Requirements
 

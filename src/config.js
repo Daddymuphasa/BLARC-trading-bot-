@@ -19,3 +19,15 @@ export const statePath = path.join(process.cwd(), "data", "blarc-state.json");
 export const priceCheckIntervalMs = 60_000;
 export const priceCheckGapMs = 400;
 export const maxPriceWatches = 20;
+
+export const copyPollIntervalMs = 15_000;
+export const maxCopyWatches = 10;
+
+export function evmRpcUrl() {
+  return String(process.env.BLARC_EVM_RPC_URL || "").trim();
+}
+
+export function solanaRpcUrl() {
+  return String(process.env.BLARC_SOLANA_RPC_URL || "").trim();
+}
+

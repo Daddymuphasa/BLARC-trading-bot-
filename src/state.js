@@ -48,6 +48,7 @@ export function ensureChatState(state, chatId) {
   state.chats[key].watchlist ||= [];
   state.chats[key].priceWatches ||= [];
   state.chats[key].alerts = state.chats[key].alerts !== false;
+  normalizeCopyFields(state.chats[key]);
   if (state.chats[key].wallet) {
     state.chats[key].wallet = sanitizeWallet(state.chats[key].wallet);
   }
@@ -63,6 +64,34 @@ export function ensureChatState(state, chatId) {
     }
   }
   return state.chats[key];
+}
+
+
+const COPY_TIERS = new Set(["low", "average", "high", "daredevil"]);
+
+function normalizeCopyFields(chat) {
+  const watches = Array.isArray(chat.copyWatches) ? chat.copyWatches : [];
+  chat.copyWatches = watches.filter((watch) => watch && typeof watch.address === "string" && (watch.chain === "EVM" || watch.chain === "Solana")).map((watch) => {
+    if (!watch.id) {
+      watch.id = randomUUID();
+    }
+    watch.auto = watch.auto === true;
+    watch.seen = Array.isArray(watch.seen) ? watch.seen.filter((item) => typeof item === "string").slice(-40) : [];
+    watch.solCursor = typeof watch.solCursor === "string" ? watch.solCursor : "";
+    watch.solPrimed = watch.solPrimed === true;
+    return watch;
+  });
+  const pending = Array.isArray(chat.pendingCopies) ? chat.pendingCopies : [];
+  chat.pendingCopies = pending.filter((item) => item && typeof item.id === "string" && typeof item.createdAt === "number").slice(-20);
+  if (typeof chat.weeklyGoalPercent !== "number" || !Number.isFinite(chat.weeklyGoalPercent) || chat.weeklyGoalPercent <= 0) {
+    chat.weeklyGoalPercent = null;
+  }
+  if (!COPY_TIERS.has(chat.riskTier)) {
+    chat.riskTier = null;
+  }
+  if (typeof chat.riskMax !== "string" || !/^\d+(\.\d+)?$/.test(chat.riskMax)) {
+    chat.riskMax = null;
+  }
 }
 
 export async function ensureState() {

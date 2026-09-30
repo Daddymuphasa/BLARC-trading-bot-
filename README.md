@@ -24,6 +24,11 @@ BLARC is an Arc-native Telegram DeFi trading bot project with a responsive produ
 - `/fee` shows the 1% (100 bps) fee and which public wallet applies to the connected chain.
 - `/swap <amount> <from> <to>` asks the user's wallet to sign one swap. The 1% is inside that transaction, paid to the chain's fee wallet. If the fee cannot be included, nothing is signed. Solana swaps are refused.
 - `/wallet <address>` add a read-only public wallet.
+- `/copy <address>` watch a public Solana or EVM wallet. Seeds and private keys are rejected. A real trade gets Copy and Skip buttons.
+- `/copies`, `/uncopy`, `/auto on|off`, `/goal <percent>`, `/risk low|average|high|daredevil`.
+- Auto does not sign. It asks the user to sign the same fee-aware swap. No connected wallet means no trade.
+- A weekly goal is stored as a percent. Profit tracking is not live, and no balance is invented.
+- Risk tiers label a trade only from sell size versus `/risk max <amount>`. Otherwise sizing is manual. No risk-reward ratio is invented.
 - `/wallets` saved read-only wallets with explorer links.
 - `/remove_wallet <address>` remove a saved wallet.
 - `/scan <contract>` token format checks plus DexScreener liquidity, volume, and pair-age signals.
@@ -54,6 +59,7 @@ Security-minded implementation choices:
 - Wallet features store public addresses only. BLARC does not store private keys, seed phrases, or signing permissions.
 - WalletConnect relay keys stay in process memory. They are not written to `data/blarc-state.json`. A new wallet is created only in the user's own wallet app.
 - The 1% fee is not custody. It is part of the swap transaction the user signs, or the swap is refused.
+- Copy trading stores public watch addresses only. Mirrored swaps go through the fee-aware swap builder. If that builder refuses, nothing is signed. Missing `BLARC_EVM_RPC_URL` or `BLARC_SOLANA_RPC_URL` saves the watch and does not pretend a trade was seen.
 
 For any future trading backend, add threat modeling before implementation. At minimum, define key custody boundaries, wallet encryption, confirmation flows, rate limiting, anti-phishing protections, logging redaction, abuse monitoring, and incident-response procedures.
 
@@ -73,7 +79,7 @@ Requires Node.js 20 or newer. The bot is plain Node ESM and starts with `node sr
 
 1. Clone this repository and enter its directory.
 2. Create a bot with BotFather and copy the token.
-3. Copy `.env.example` to `.env` and fill it in. `.env` is gitignored. Set `TELEGRAM_BOT_TOKEN`. For pairing, set `WALLETCONNECT_PROJECT_ID` from Reown (WalletConnect) Cloud. Set `ZEROX_API_KEY` or `/swap` refuses and sends nothing. Fee fields are public addresses that receive the 1% inside a swap (`BLARC_FEE_ADDRESS` for EVM, `BLARC_FEE_ADDRESS_SOL` for Solana, `BLARC_FEE_ADDRESS_ROBINHOOD` for Robinhood chain 4663, `BLARC_FEE_ADDRESS_ARC` for Arc chain 5042). Do not put private keys, seed phrases, or real tokens into git. Empty `BLARC_BOT_USERNAME`, `BLARC_SUPPORT_URL`, and `BLARC_UPDATES_URL` fall back to the built-in public defaults.
+3. Copy `.env.example` to `.env` and fill it in. `.env` is gitignored. Set `TELEGRAM_BOT_TOKEN`. For pairing, set `WALLETCONNECT_PROJECT_ID` from Reown (WalletConnect) Cloud. Set `ZEROX_API_KEY` or `/swap` and copy trades refuse and send nothing. Set `BLARC_EVM_RPC_URL` and `BLARC_SOLANA_RPC_URL` or copy watching stays saved without reading trades. Fee fields are public addresses that receive the 1% inside a swap (`BLARC_FEE_ADDRESS` for EVM, `BLARC_FEE_ADDRESS_SOL` for Solana, `BLARC_FEE_ADDRESS_ROBINHOOD` for Robinhood chain 4663, `BLARC_FEE_ADDRESS_ARC` for Arc chain 5042). Do not put private keys, seed phrases, or real tokens into git. Empty `BLARC_BOT_USERNAME`, `BLARC_SUPPORT_URL`, and `BLARC_UPDATES_URL` fall back to the built-in public defaults.
 4. Install and start:
 
 ```bash
@@ -115,6 +121,7 @@ The wallet packages are `@walletconnect/sign-client` and `qrcode`. Swaps are use
 - `src/alerts.js` - price-watch commands and the check loop.
 - `src/wallet.js` - WalletConnect pairing, public-address session, and user-signed `eth_sendTransaction` requests.
 - `src/swap.js` - 0x swap quote with the 1% fee inside the transaction, or a refusal.
+- `src/copy.js` - public-wallet copy watches. Execution only calls the fee-aware swap.
 - `src/dexscreener.js` - read-only DexScreener market data adapter.
 - `src/env.js` - loads `.env` from the working directory without overriding existing variables.
 - `scripts/register-telegram-commands.js` - registers command hints with Telegram.

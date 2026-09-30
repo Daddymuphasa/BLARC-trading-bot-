@@ -17,6 +17,7 @@ import { ensureChatState, mutateState, readState, upsertChat } from "./state.js"
 import { escapeHtml, sendMessage, sendPhoto, sendPlain, sleep } from "./telegram.js";
 import { handleAlerts, handleUnwatch, handleWatch, handleWatchlist } from "./alerts.js";
 import { executeSwap, swapApiKey } from "./swap.js";
+import { formatCopyStatus, handleAuto, handleCopy, handleCopyCallback, handleCopies, handleGoal, handleRisk, handleUncopy } from "./copy.js";
 import process from "node:process";
 
 const pairingGeneration = new Map();
@@ -37,6 +38,12 @@ const commands = {
   unwatch: handleUnwatch,
   price: handlePrice,
   alerts: handleAlerts,
+  copy: handleCopy,
+  copies: handleCopies,
+  uncopy: handleUncopy,
+  auto: handleAuto,
+  goal: handleGoal,
+  risk: handleRisk,
   settings: handleSettings,
   support: handleSupport,
   about: handleAbout,
@@ -44,13 +51,28 @@ const commands = {
 };
 
 export async function handleUpdate(update) {
+  if (update.callback_query) {
+    await handleCopyCallback(update.callback_query);
+    return;
+  }
+
   const message = update.message;
   if (!message?.chat?.id || !message.text) {
     return;
   }
 
+  if (looksLikeSecretMaterial(message.text)) {
+    await sendMessage(message.chat.id, "That looks like a seed phrase or private key. BLARC does not accept it. Nothing was saved.");
+    return;
+  }
+
   const parsed = parseCommand(message.text);
   if (!parsed) {
+    const trimmed = message.text.trim();
+    if (!/\s/.test(trimmed) && classifyAddress(trimmed).valid) {
+      await handleCopy(message, [trimmed]);
+      return;
+    }
     await sendMessage(message.chat.id, "Send /help to see what BLARC can do right now.");
     return;
   }
@@ -90,6 +112,7 @@ async function handleStart(message) {
       "/fee - show the 1% in-swap fee wallet",
       "/swap &lt;amount&gt; &lt;from&gt; &lt;to&gt; - sign a swap with the 1% fee inside it, or nothing is sent",
       "/wallet &lt;address&gt; - add a read-only wallet",
+      "/copy &lt;address&gt; - watch a public wallet. Copy or Skip when it trades",
       "/wallets - view saved wallets",
       "/scan &lt;contract&gt; - run token and market risk checks",
       "/watch &lt;token&gt; above &lt;usd&gt; - alert when price crosses a target",
@@ -114,6 +137,12 @@ async function handleHelp(message) {
       "/fee - show the public 1% fee wallet",
       "/swap &lt;amount&gt; &lt;from&gt; &lt;to&gt; - sign a swap only if the 1% fee is inside that transaction",
       "/wallet &lt;address&gt; - add a read-only wallet",
+      "/copy &lt;address&gt; - watch a public wallet",
+      "/copies - list copy watches, goal, and risk",
+      "/uncopy &lt;address&gt; - stop watching a wallet",
+      "/auto on|off - auto-request a signature for one watched wallet",
+      "/goal &lt;percent&gt; - store a weekly profit goal",
+      "/risk low|average|high|daredevil - pick a risk tier",
       "/wallets - list saved wallets",
       "/remove_wallet &lt;address&gt; - remove a saved wallet",
       "/scan &lt;contract&gt; - token and market risk checks",
@@ -643,6 +672,7 @@ async function handleSettings(message) {
       `Price watches: <b>${watchCount}</b>/${maxPriceWatches}`,
       `Wallets: <b>${walletCount}</b>/20`,
       formatConnectedWallet(chat?.wallet),
+      formatCopyStatus(chat),
       "",
       "Price targets: /watch &lt;token&gt; above &lt;usd&gt; or below &lt;usd&gt;.",
       "Change delivery with /alerts on or /alerts off.",
@@ -676,6 +706,7 @@ async function handleAbout(message) {
       "Current bot status: safe MVP.",
       "Wallet pairing is non-custodial: /connect saves a public address only. /swap asks your wallet to sign. BLARC never holds a key.",
       "A swap is requested only when the 1% fee is inside that same transaction. Otherwise nothing is sent. Solana swaps are refused.",
+      "Copy trading watches a public wallet. Auto still asks you to sign. BLARC does not sign and does not hold a key.",
     ].join("\n"),
   );
 }

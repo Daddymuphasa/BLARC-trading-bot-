@@ -1,5 +1,6 @@
 import process from "node:process";
 import { startPriceAlertLoop } from "./alerts.js";
+import { startCopyWatchLoop } from "./copy.js";
 import { handleUpdate } from "./commands.js";
 import { botUsername, token } from "./config.js";
 import { ensureState } from "./state.js";
@@ -16,11 +17,12 @@ async function main() {
   console.log(`BLARC bot polling as @${botUsername}`);
   await ensureState();
   startPriceAlertLoop();
+  startCopyWatchLoop();
 
   while (true) {
     try {
       const updates = await telegram("getUpdates", {
-        allowed_updates: ["message"],
+        allowed_updates: ["message", "callback_query"],
         offset,
         timeout: 25,
       });
