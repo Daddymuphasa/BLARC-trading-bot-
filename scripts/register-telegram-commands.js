@@ -13,6 +13,7 @@ if (!token) {
 const commands = [
   { command: "start", description: "Start BLARC onboarding" },
   { command: "help", description: "Show available commands" },
+  { command: "create", description: "Create a wallet and reveal the seed once" },
   { command: "connect", description: "Pair your own wallet with WalletConnect" },
   { command: "disconnect", description: "Forget the connected public address" },
   { command: "fee", description: "Show the 1% swap fee wallet" },

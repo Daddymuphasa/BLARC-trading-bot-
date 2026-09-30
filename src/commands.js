@@ -14,6 +14,7 @@ import {
 import { buildMarketRiskLines, classifyAddress, findBestPair, formatPairSummary } from "./dexscreener.js";
 import { adminIds, maxPriceWatches, supportUrl, twitterUrl, updatesUrl } from "./config.js";
 import { ensureChatState, mutateState, readState, upsertChat } from "./state.js";
+import { formatCreatedWallet, handleCreate, handleCreateCallback } from "./createCommand.js";
 import { escapeHtml, sendGuide, sendMessage, sendPhoto, sendPlain, sleep } from "./telegram.js";
 import { handleAlerts, handleUnwatch, handleWatch, handleWatchlist } from "./alerts.js";
 import { ensurePairCard } from "./cards.js";
@@ -26,6 +27,7 @@ const pairingGeneration = new Map();
 const commands = {
   start: handleStart,
   help: handleHelp,
+  create: handleCreate,
   connect: handleConnect,
   disconnect: handleDisconnect,
   fee: handleFee,
@@ -53,6 +55,9 @@ const commands = {
 
 export async function handleUpdate(update) {
   if (update.callback_query) {
+    if (await handleCreateCallback(update.callback_query)) {
+      return;
+    }
     await handleCopyCallback(update.callback_query);
     return;
   }
@@ -133,6 +138,7 @@ async function handleHelp(message) {
     [
       "<b>BLARC</b>",
       "/start — welcome",
+      "/create — new wallet, seed shown once after you confirm",
       "/connect — pair wallet",
       "/disconnect — forget address",
       "/fee — 1% fee wallet",
@@ -428,6 +434,20 @@ async function handleSwap(message, args) {
 }
 
 async function handleWallet(message, args) {
+  if (!args[0]) {
+    const state = await readState();
+    const chat = state.chats?.[String(message.chat.id)];
+    await sendMessage(
+      message.chat.id,
+      [
+        formatCreatedWallet(chat),
+        "",
+        "These are public addresses only. BLARC cannot move funds or sign for this wallet.",
+        "Add a different public address with /wallet &lt;address&gt;.",
+      ].join("\n"),
+    );
+    return;
+  }
   return addWallet(message, args, {
     emptyUsage: "Usage: /wallet &lt;public-wallet-address&gt;",
     savedPrefix: "Read-only wallet saved",
@@ -519,8 +539,12 @@ async function listWallets(message) {
   const chat = state.chats?.[String(message.chat.id)] || { watchlist: [] };
   chat.watchlist ||= [];
 
+  const created = formatCreatedWallet(chat);
   if (chat.watchlist.length === 0) {
-    await sendMessage(message.chat.id, "Your BLARC wallet list is empty. Add one with /wallet &lt;public-wallet-address&gt;.");
+    await sendMessage(
+      message.chat.id,
+      [created, "", "No extra read-only addresses yet. Add one with /wallet &lt;public-wallet-address&gt;."].join("\n"),
+    );
     return;
   }
 
@@ -536,6 +560,7 @@ async function listWallets(message) {
     message.chat.id,
     [
       "<b>Your read-only BLARC wallets</b>",
+      created,
       "",
       ...wallets,
       "",
@@ -682,6 +707,7 @@ async function handleSettings(message) {
       `Price watches: <b>${watchCount}</b>/${maxPriceWatches}`,
       `Wallets: <b>${walletCount}</b>/20`,
       formatConnectedWallet(chat?.wallet),
+      formatCreatedWallet(chat),
       formatCopyStatus(chat),
       "",
       "Price targets: /watch &lt;token&gt; above &lt;usd&gt; or below &lt;usd&gt;.",
@@ -716,6 +742,7 @@ async function handleAbout(message) {
       "",
       "Current bot status: safe MVP.",
       "Wallet pairing is non-custodial: /connect saves a public address only. /swap asks your wallet to sign. BLARC never holds a key.",
+      "/create can show a new seed once in this chat after you confirm. It is not stored. Import it into your own wallet and /connect to sign.",
       "A swap is requested only when the 1% fee is inside that same transaction. Otherwise nothing is sent. Solana swaps are refused.",
       "Copy trading watches a public wallet. Auto still asks you to sign. BLARC does not sign and does not hold a key.",
     ].join("\n"),

@@ -19,6 +19,7 @@ BLARC is an Arc-native Telegram DeFi trading bot project with a responsive produ
 
 - `/start` onboarding.
 - `/help` command list.
+- `/create` makes a new 12-word wallet in memory. The seed is shown once in that chat only after a confirmation tap, then forgotten. Only the public EVM and Solana addresses are saved. The bot cannot sign that wallet. Import the seed into your own wallet and use `/connect`.
 - `/connect` starts a non-custodial WalletConnect pairing and sends a QR plus pairing URI. Approval saves only the public address and chain id.
 - `/disconnect` forgets that public address.
 - `/fee` shows the 1% (100 bps) fee and which public wallet applies to the connected chain.
@@ -58,7 +59,7 @@ Security-minded implementation choices:
 - Price alerts poll DexScreener about once a minute and send one Telegram message per target cross. They do not trade, sign, or hold keys.
 - A pasted contract on `/price` or `/watch` saves one pair card under `data/cards/<chainId>-<tokenAddress>.jpg`. Later price alerts and existing buy notices reuse that file. Generated cards are gitignored so a persistent `data` volume keeps them.
 - Wallet features store public addresses only. BLARC does not store private keys, seed phrases, or signing permissions.
-- WalletConnect relay keys stay in process memory. They are not written to `data/blarc-state.json`. A new wallet is created only in the user's own wallet app.
+- WalletConnect relay keys stay in process memory. They are not written to `data/blarc-state.json`. `/create` holds a new seed in memory only until the one-time reveal, then drops it. The state file keeps the public addresses only.
 - The 1% fee is not custody. It is part of the swap transaction the user signs, or the swap is refused.
 - Copy trading stores public watch addresses only. Mirrored swaps go through the fee-aware swap builder. If that builder refuses, nothing is signed. Missing `BLARC_EVM_RPC_URL` or `BLARC_SOLANA_RPC_URL` saves the watch and does not pretend a trade was seen.
 
@@ -120,6 +121,8 @@ The wallet packages are `@walletconnect/sign-client` and `qrcode`. Swaps are use
 - `src/telegram.js` - Telegram send and getUpdates helpers.
 - `src/commands.js` - command handlers.
 - `src/alerts.js` - price-watch commands and the check loop.
+- `src/createWallet.js` - in-memory 12-word wallet and public address derivation. No key is returned except the one-time mnemonic to the reveal step.
+- `src/createCommand.js` - `/create` warning, confirmation button, one-time seed send, then public-address save.
 - `src/wallet.js` - WalletConnect pairing, public-address session, and user-signed `eth_sendTransaction` requests.
 - `src/swap.js` - 0x swap quote with the 1% fee inside the transaction, or a refusal.
 - `src/copy.js` - public-wallet copy watches. Execution only calls the fee-aware swap.

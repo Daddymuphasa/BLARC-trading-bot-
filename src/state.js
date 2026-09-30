@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { statePath } from "./config.js";
+import { sanitizeCreatedWallet } from "./createWallet.js";
 import { sanitizeWallet } from "./wallet.js";
 
 let stateLock = Promise.resolve();
@@ -48,6 +49,7 @@ export function ensureChatState(state, chatId) {
   state.chats[key].watchlist ||= [];
   state.chats[key].priceWatches ||= [];
   state.chats[key].alerts = state.chats[key].alerts !== false;
+  scrubChatSecrets(state.chats[key]);
   normalizeCopyFields(state.chats[key]);
   if (state.chats[key].wallet) {
     state.chats[key].wallet = sanitizeWallet(state.chats[key].wallet);
@@ -106,10 +108,38 @@ export async function ensureState() {
 export async function loadState() {
   await ensureState();
   const raw = await readFile(statePath, "utf8");
-  return JSON.parse(raw);
+  const state = JSON.parse(raw);
+  scrubState(state);
+  return state;
+}
+
+const SECRET_CHAT_KEYS = ["mnemonic", "seedPhrase", "seed", "privateKey", "private_key", "xprv", "secretKey"];
+
+function scrubChatSecrets(chat) {
+  if (!chat || typeof chat !== "object") {
+    return;
+  }
+  if (chat.createdWallet !== undefined) {
+    chat.createdWallet = sanitizeCreatedWallet(chat.createdWallet);
+  }
+  for (const key of SECRET_CHAT_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(chat, key)) {
+      delete chat[key];
+    }
+  }
+}
+
+function scrubState(state) {
+  if (!state?.chats || typeof state.chats !== "object") {
+    return;
+  }
+  for (const chat of Object.values(state.chats)) {
+    scrubChatSecrets(chat);
+  }
 }
 
 export async function saveState(state) {
+  scrubState(state);
   await mkdir(path.dirname(statePath), { recursive: true });
   const tmpPath = `${statePath}.tmp`;
   await writeFile(tmpPath, `${JSON.stringify(state, null, 2)}\n`);
