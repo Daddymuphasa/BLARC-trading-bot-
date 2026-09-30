@@ -1,11 +1,11 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { classifyAddress } from "./dexscreener.js";
-import { copyPollIntervalMs, evmRpcUrl, maxCopyWatches, solanaRpcUrl } from "./config.js";
+import { copyPollIntervalMs, evmRpcConfigured, evmRpcUrl, maxCopyWatches, solanaRpcUrl } from "./config.js";
 import { ensureChatState, mutateState, readState } from "./state.js";
 import { savedCardForTrade } from "./cards.js";
 import { escapeHtml, sendGuide, sendMessage, sendPhotoFile, sleep, telegram } from "./telegram.js";
 import { executeSwap } from "./swap.js";
-import { chainIdNumber, isEvmAddress, looksLikeSecretMaterial, sanitizeWallet } from "./wallet.js";
+import { ROBINHOOD_CHAIN_ID, chainIdNumber, isEvmAddress, looksLikeSecretMaterial, sanitizeWallet } from "./wallet.js";
 
 const NATIVE = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
@@ -20,6 +20,7 @@ const MAX_SOL_SIGS = 5;
 
 const decimalsCache = new Map();
 let evmDecimalsChain = null;
+let skippedForeignEvmChain = false;
 
 export function startCopyWatchLoop() {
   const loop = async () => {
@@ -192,7 +193,11 @@ export function formatCopyStatus(chat, options = {}) {
   lines.push(goalText(chat?.weeklyGoalPercent));
   lines.push(riskText(chat));
   if (watches.some((watch) => watch.chain === "EVM")) {
-    lines.push(evmRpcUrl() ? "EVM watching uses BLARC_EVM_RPC_URL." : "EVM watching starts when BLARC_EVM_RPC_URL is set. No trades have been seen.");
+    lines.push(
+      evmRpcConfigured()
+        ? "EVM watching uses BLARC_EVM_RPC_URL."
+        : "EVM watching uses the public Robinhood RPC.",
+    );
   }
   if (watches.some((watch) => watch.chain === "Solana")) {
     lines.push(
@@ -495,8 +500,19 @@ async function pollCopyWatches() {
 async function pollEvm(watches) {
   const url = evmRpcUrl();
   const chainId = Number(BigInt(await rpc(url, "eth_chainId", [])));
+  if (!Number.isSafeInteger(chainId) || chainId <= 0) {
+    throw new Error("evm chain header unusable");
+  }
+  if (chainId !== ROBINHOOD_CHAIN_ID) {
+    if (!skippedForeignEvmChain) {
+      skippedForeignEvmChain = true;
+      console.error("Copy watch skipped EVM blocks because the RPC chain id is not 4663. No trades were reported.");
+    }
+    return;
+  }
+  skippedForeignEvmChain = false;
   const head = BigInt(await rpc(url, "eth_blockNumber", []));
-  if (!Number.isSafeInteger(chainId) || chainId <= 0 || head < 0n) {
+  if (head < 0n) {
     throw new Error("evm chain header unusable");
   }
   const state = await readState();
@@ -973,7 +989,7 @@ async function rpc(url, method, params) {
   try {
     response = await fetch(url, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "user-agent": "blarc-bot" },
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
       signal: AbortSignal.timeout(12000),
     });

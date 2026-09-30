@@ -24,8 +24,14 @@ export const maxPriceWatches = 20;
 export const copyPollIntervalMs = 15_000;
 export const maxCopyWatches = 10;
 
+const ROBINHOOD_PUBLIC_RPC = "https://rpc.mainnet.chain.robinhood.com";
+
+export function evmRpcConfigured() {
+  return Boolean(String(process.env.BLARC_EVM_RPC_URL || "").trim());
+}
+
 export function evmRpcUrl() {
-  return String(process.env.BLARC_EVM_RPC_URL || "").trim();
+  return String(process.env.BLARC_EVM_RPC_URL || "").trim() || ROBINHOOD_PUBLIC_RPC;
 }
 
 export function solanaRpcUrl() {
