@@ -52,6 +52,7 @@ export function feeWalletStatus() {
 
 export const ARC_CHAIN_ID = 5042;
 export const ROBINHOOD_CHAIN_ID = 4663;
+export const CELO_CHAIN_ID = 42220;
 // 0x uses these ids for non-EVM networks. They are not EIP-155 chains.
 const NON_EVM_SENTINEL_CHAIN_IDS = new Set([999999999991, 999999999992, 999999999993]);
 
@@ -84,6 +85,8 @@ export function feeWalletForChain(chainId) {
     family = "arc";
   } else if (id === ROBINHOOD_CHAIN_ID) {
     family = "robinhood";
+  } else if (id === CELO_CHAIN_ID) {
+    family = "evm";
   } else if (id === 999999999991) {
     family = "sol";
   } else if (NON_EVM_SENTINEL_CHAIN_IDS.has(id)) {

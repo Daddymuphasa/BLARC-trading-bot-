@@ -3,6 +3,7 @@ import {
   beginPairing,
   disconnectTopic,
   dropChatSession,
+  CELO_CHAIN_ID,
   feeWalletStatus,
   looksLikeSecretMaterial,
   pairingQrPng,
@@ -351,7 +352,7 @@ async function handleFee(message) {
   ];
   lines.push(
     status.evm
-      ? `EVM chains other than Arc and Robinhood: <code>${escapeHtml(status.evm)}</code>`
+      ? `EVM chains other than Arc and Robinhood, including Celo (chain ${CELO_CHAIN_ID}): <code>${escapeHtml(status.evm)}</code>`
       : "EVM fee wallet is not set. Those swaps are refused.",
   );
   lines.push(
