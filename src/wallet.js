@@ -6,7 +6,7 @@ export const FEE_BPS = 100;
 
 const EVM_METHODS = ["eth_sendTransaction", "personal_sign"];
 const EVM_EVENTS = ["chainChanged", "accountsChanged"];
-const OPTIONAL_CHAINS = ["eip155:1", "eip155:8453", "eip155:42161", "eip155:10", "eip155:137", "eip155:56"];
+const OPTIONAL_CHAINS = ["eip155:1", "eip155:8453", "eip155:42161", "eip155:10", "eip155:137", "eip155:56", "eip155:4663", "eip155:5042"];
 
 let clientPromise;
 const sessionTopicByChat = new Map();
@@ -48,6 +48,97 @@ export function feeWalletStatus() {
     robinhood: robinhoodOk ? robinhood : null,
     arc: arcOk ? arc : null,
   };
+}
+
+export const ARC_CHAIN_ID = 5042;
+export const ROBINHOOD_CHAIN_ID = 4663;
+// 0x uses these ids for non-EVM networks. They are not EIP-155 chains.
+const NON_EVM_SENTINEL_CHAIN_IDS = new Set([999999999991, 999999999992, 999999999993]);
+
+export function chainIdNumber(chainId) {
+  const match = /^eip155:(\d+)$/.exec(String(chainId || ""));
+  if (!match) {
+    return null;
+  }
+  const value = Number(match[1]);
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    return null;
+  }
+  return value;
+}
+
+export function feeWalletForChain(chainId) {
+  const id = chainIdNumber(chainId);
+  if (id === null) {
+    return { error: "unknown" };
+  }
+  const status = feeWalletStatus();
+  if (status.state === "missing") {
+    return { error: "missing" };
+  }
+  if (status.state !== "ok") {
+    return { error: "invalid" };
+  }
+  let family;
+  if (id === ARC_CHAIN_ID) {
+    family = "arc";
+  } else if (id === ROBINHOOD_CHAIN_ID) {
+    family = "robinhood";
+  } else if (id === 999999999991) {
+    family = "sol";
+  } else if (NON_EVM_SENTINEL_CHAIN_IDS.has(id)) {
+    return { error: "unknown" };
+  } else {
+    family = "evm";
+  }
+  const address = status[family];
+  if (!address) {
+    return { error: "unset", family, chainId: id };
+  }
+  return { family, address, chainId: id };
+}
+
+export function hasWalletSession(chatId) {
+  return sessionTopicByChat.has(String(chatId));
+}
+
+export async function requestWalletTransaction(chatId, chainId, tx) {
+  const topic = sessionTopicByChat.get(String(chatId));
+  if (!topic) {
+    throw new Error("Wallet session is not active. Run /connect again.");
+  }
+  const client = await getClient();
+  let session;
+  try {
+    session = client.session.get(topic);
+  } catch {
+    throw new Error("Wallet session is not active. Run /connect again.");
+  }
+  if (!session) {
+    throw new Error("Wallet session is not active. Run /connect again.");
+  }
+  const accounts = session?.namespaces?.eip155?.accounts;
+  const from = String(tx?.from || "");
+  const wanted = `${chainId}:${from}`.toLowerCase();
+  const known = Array.isArray(accounts) && accounts.some((account) => {
+    const raw = String(account).toLowerCase();
+    return raw === wanted || raw.endsWith(`:${from.toLowerCase()}`);
+  });
+  if (!known) {
+    throw new Error("This wallet session does not include that account. Run /connect again.");
+  }
+  return withTimeout(
+    client.request({
+      topic,
+      chainId,
+      request: {
+        method: "eth_sendTransaction",
+        params: [tx],
+      },
+    }),
+    180000,
+    "The wallet did not respond in time. Nothing further was sent.",
+  );
 }
 
 export function isEvmAddress(value) {

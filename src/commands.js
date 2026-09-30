@@ -1,7 +1,6 @@
 import {
   adoptSession,
   beginPairing,
-  buildSwapPreview,
   disconnectTopic,
   dropChatSession,
   feeWalletStatus,
@@ -17,6 +16,7 @@ import { adminIds, maxPriceWatches, supportUrl, updatesUrl } from "./config.js";
 import { ensureChatState, mutateState, readState, upsertChat } from "./state.js";
 import { escapeHtml, sendMessage, sendPhoto, sendPlain, sleep } from "./telegram.js";
 import { handleAlerts, handleUnwatch, handleWatch, handleWatchlist } from "./alerts.js";
+import { executeSwap, swapApiKey } from "./swap.js";
 import process from "node:process";
 
 const pairingGeneration = new Map();
@@ -88,7 +88,7 @@ async function handleStart(message) {
       "/connect - pair a wallet you control (WalletConnect)",
       "/disconnect - forget the connected public address",
       "/fee - show the 1% in-swap fee wallet",
-      "/swap &lt;amount&gt; &lt;from&gt; &lt;to&gt; - preview a swap, nothing is broadcast",
+      "/swap &lt;amount&gt; &lt;from&gt; &lt;to&gt; - sign a swap with the 1% fee inside it, or nothing is sent",
       "/wallet &lt;address&gt; - add a read-only wallet",
       "/wallets - view saved wallets",
       "/scan &lt;contract&gt; - run token and market risk checks",
@@ -112,7 +112,7 @@ async function handleHelp(message) {
       "/connect - pair your own wallet with WalletConnect",
       "/disconnect - forget the connected public address",
       "/fee - show the public 1% fee wallet",
-      "/swap &lt;amount&gt; &lt;from&gt; &lt;to&gt; - preview a swap (no broadcast)",
+      "/swap &lt;amount&gt; &lt;from&gt; &lt;to&gt; - sign a swap only if the 1% fee is inside that transaction",
       "/wallet &lt;address&gt; - add a read-only wallet",
       "/wallets - list saved wallets",
       "/remove_wallet &lt;address&gt; - remove a saved wallet",
@@ -252,7 +252,7 @@ async function finishPairing(chatId, generation, session) {
       `Chain: <code>${escapeHtml(account.chainId)}</code>`,
       "",
       "Saved the public address and chain id only. Your keys stay in your wallet app.",
-      "Use /swap to preview a trade. BLARC does not broadcast a transaction.",
+      "Use /swap to sign a trade in your wallet. The 1% fee is inside that transaction, or nothing is sent.",
       "/disconnect forgets this address.",
     ].join("\n"),
   );
@@ -295,26 +295,50 @@ async function handleFee(message) {
   if (status.state === "missing") {
     await sendMessage(
       message.chat.id,
-      "No fee wallet is set. The swap cut is 1% (100 bps), taken inside a swap only after the public BLARC_FEE_ADDRESS is configured.",
+      "No fee wallet is set. Fee cannot be included, swap not sent.",
     );
     return;
   }
   if (status.state !== "ok") {
     await sendMessage(
       message.chat.id,
-      "A fee wallet value is present, but it is not a valid public EVM address, so it is not used. The swap cut is 1% (100 bps).",
+      "A fee wallet value is present, but it is not a valid public address for its chain, so it is not used. Fee cannot be included, swap not sent.",
     );
     return;
   }
-  const lines = ["<b>BLARC swap fee</b>", "Cut: <b>1%</b> (100 bps), taken inside the swap. BLARC does not take custody of funds."];
-  if (status.evm) lines.push(`EVM: <code>${escapeHtml(status.evm)}</code>`);
-  if (status.sol) {
-    lines.push(`Solana: <code>${escapeHtml(status.sol)}</code>`);
-    lines.push("Solana swaps are not live yet, so this address is saved and not used on a trade.");
-  }
-  if (status.robinhood) lines.push(`Robinhood: <code>${escapeHtml(status.robinhood)}</code>`);
-  if (status.arc) lines.push(`Arc: <code>${escapeHtml(status.arc)}</code>`);
-  if (!status.evm) lines.push("No EVM fee wallet is set, so an EVM swap preview will still refuse.");
+  const lines = [
+    "<b>BLARC swap fee</b>",
+    "Cut: <b>1%</b> (100 bps) of the sell amount, in that token, inside the one transaction you sign.",
+    "BLARC does not take custody and does not sign.",
+    "",
+    "Which wallet is paid depends on the connected chain. If that wallet is missing, the swap is refused.",
+  ];
+  lines.push(
+    status.evm
+      ? `EVM chains other than Arc and Robinhood: <code>${escapeHtml(status.evm)}</code>`
+      : "EVM fee wallet is not set. Those swaps are refused.",
+  );
+  lines.push(
+    status.robinhood
+      ? `Robinhood (chain 4663): <code>${escapeHtml(status.robinhood)}</code>`
+      : "Robinhood fee wallet is not set. Those swaps are refused.",
+  );
+  lines.push(
+    status.arc
+      ? `Arc (chain 5042): <code>${escapeHtml(status.arc)}</code>`
+      : "Arc fee wallet is not set. Those swaps are refused.",
+  );
+  lines.push(
+    status.sol
+      ? `Solana: <code>${escapeHtml(status.sol)}</code>`
+      : "Solana fee wallet is not set.",
+  );
+  lines.push("Solana swaps are refused. The 1% cannot be put in the same Solana transaction here, so nothing is signed.");
+  lines.push(
+    swapApiKey()
+      ? "On Arc, Robinhood, and other supported EVM chains, /swap asks your wallet to sign only when the quote puts this 1% in that transaction."
+      : "ZEROX_API_KEY is not set. Fee cannot be included, swap not sent.",
+  );
   await sendMessage(message.chat.id, lines.join("\n"));
 }
 
@@ -331,12 +355,6 @@ async function handleSwap(message, args) {
   const wallet = sanitizeWallet(state.chats?.[String(message.chat.id)]?.wallet);
   if (!wallet) {
     await sendMessage(message.chat.id, "No wallet is connected for this chat. Use /connect, then approve it in your own wallet app.");
-    return;
-  }
-
-  const fee = feeWalletStatus();
-  if (fee.state !== "ok") {
-    await sendMessage(message.chat.id, "Swap refused. The fee wallet is not set.");
     return;
   }
 
@@ -359,43 +377,19 @@ async function handleSwap(message, args) {
   if (parsed.error) {
     await sendMessage(
       message.chat.id,
-      "Usage: /swap &lt;amount&gt; &lt;from-token&gt; &lt;to-token&gt;\nExample: /swap 100 USDC ETH\nThis is a preview only. No transaction is broadcast.",
+      "Usage: /swap &lt;amount&gt; &lt;from-token&gt; &lt;to-token&gt;\nExample: /swap 100 USDC ETH\nThe 1% fee has to be inside the transaction you sign. Otherwise nothing is sent.",
     );
     return;
   }
 
-  const preview = buildSwapPreview({
+  const reply = await executeSwap({
+    chatId: message.chat.id,
+    wallet,
     amount: parsed.amount,
     tokenIn: parsed.tokenIn,
     tokenOut: parsed.tokenOut,
-    wallet,
-    feeAddress: fee.address,
   });
-  if (!preview) {
-    await sendMessage(message.chat.id, "Swap refused. The preview could not be built, and nothing was broadcast.");
-    return;
-  }
-
-  await sendMessage(
-    message.chat.id,
-    [
-      "<b>BLARC Swap Preview</b>",
-      "Preview only. No transaction was broadcast.",
-      "",
-      `Wallet: <code>${escapeHtml(preview.address)}</code>`,
-      `Chain: <code>${escapeHtml(preview.chainId)}</code>`,
-      `Sell: <b>${escapeHtml(preview.amount)} ${escapeHtml(preview.tokenIn)}</b>`,
-      `Buy: <b>${escapeHtml(preview.tokenOut)}</b>`,
-      "Fee: <b>1%</b> (100 bps) of the sold amount",
-      `Fee wallet: <code>${escapeHtml(preview.feeAddress)}</code>`,
-      `Fee amount: <b>${escapeHtml(preview.fee)} ${escapeHtml(preview.tokenIn)}</b>`,
-      `Amount after fee: <b>${escapeHtml(preview.net)} ${escapeHtml(preview.tokenIn)}</b>`,
-      "",
-      "The 1% goes to the fee wallet inside the swap, as the swap's fee recipient. BLARC does not take custody of the funds.",
-      "There is no quoted output yet, because no swap was built or signed.",
-      "Do not paste a seed phrase or private key.",
-    ].join("\n"),
-  );
+  await sendMessage(message.chat.id, reply);
 }
 
 async function handleWallet(message, args) {
@@ -680,8 +674,8 @@ async function handleAbout(message) {
       "BLARC is being built as an Arc-native Telegram command center for DeFi discovery, monitoring, and eventually guarded trading workflows.",
       "",
       "Current bot status: safe MVP.",
-      "Wallet pairing is non-custodial: /connect saves a public address only. /swap previews a 1% in-swap fee and does not broadcast.",
-      "Live trading, private-key custody, and copy-trading execution are intentionally not enabled yet.",
+      "Wallet pairing is non-custodial: /connect saves a public address only. /swap asks your wallet to sign. BLARC never holds a key.",
+      "A swap is requested only when the 1% fee is inside that same transaction. Otherwise nothing is sent. Solana swaps are refused.",
     ].join("\n"),
   );
 }

@@ -21,8 +21,8 @@ BLARC is an Arc-native Telegram DeFi trading bot project with a responsive produ
 - `/help` command list.
 - `/connect` starts a non-custodial WalletConnect pairing and sends a QR plus pairing URI. Approval saves only the public address and chain id.
 - `/disconnect` forgets that public address.
-- `/fee` shows whether the public fee wallet is set and that the swap cut is 1% (100 bps).
-- `/swap <amount> <from> <to>` previews a swap. The 1% is paid to `BLARC_FEE_ADDRESS` inside the swap. Nothing is broadcast.
+- `/fee` shows the 1% (100 bps) fee and which public wallet applies to the connected chain.
+- `/swap <amount> <from> <to>` asks the user's wallet to sign one swap. The 1% is inside that transaction, paid to the chain's fee wallet. If the fee cannot be included, nothing is signed. Solana swaps are refused.
 - `/wallet <address>` add a read-only public wallet.
 - `/wallets` saved read-only wallets with explorer links.
 - `/remove_wallet <address>` remove a saved wallet.
@@ -48,12 +48,12 @@ Security-minded implementation choices:
 - External links use `rel="noopener"`.
 - Static assets are local under `assets/`.
 - Bot runtime state is stored locally under `data/` and JSON state files are gitignored.
-- Trading execution and wallet custody are intentionally not enabled.
+- The bot never holds a key. A swap signature is requested only through WalletConnect, and only when the 1% fee is inside that transaction.
 - Market lookups use DexScreener's public read-only API; responses are informational, not trading advice.
 - Price alerts poll DexScreener about once a minute and send one Telegram message per target cross. They do not trade, sign, or hold keys.
 - Wallet features store public addresses only. BLARC does not store private keys, seed phrases, or signing permissions.
 - WalletConnect relay keys stay in process memory. They are not written to `data/blarc-state.json`. A new wallet is created only in the user's own wallet app.
-- The 1% fee is not custody. It is described on the swap preview as a payment to the public fee wallet inside the swap.
+- The 1% fee is not custody. It is part of the swap transaction the user signs, or the swap is refused.
 
 For any future trading backend, add threat modeling before implementation. At minimum, define key custody boundaries, wallet encryption, confirmation flows, rate limiting, anti-phishing protections, logging redaction, abuse monitoring, and incident-response procedures.
 
@@ -73,7 +73,7 @@ Requires Node.js 20 or newer. The bot is plain Node ESM and starts with `node sr
 
 1. Clone this repository and enter its directory.
 2. Create a bot with BotFather and copy the token.
-3. Copy `.env.example` to `.env` and fill it in. `.env` is gitignored. Set `TELEGRAM_BOT_TOKEN`. For pairing, set `WALLETCONNECT_PROJECT_ID` from Reown (WalletConnect) Cloud. Fee fields are public addresses that receive the 1% inside a swap (`BLARC_FEE_ADDRESS`, `BLARC_FEE_ADDRESS_SOL`, `BLARC_FEE_ADDRESS_ROBINHOOD`, `BLARC_FEE_ADDRESS_ARC`). Do not put private keys, seed phrases, or real tokens into git. Empty `BLARC_BOT_USERNAME`, `BLARC_SUPPORT_URL`, and `BLARC_UPDATES_URL` fall back to the built-in public defaults.
+3. Copy `.env.example` to `.env` and fill it in. `.env` is gitignored. Set `TELEGRAM_BOT_TOKEN`. For pairing, set `WALLETCONNECT_PROJECT_ID` from Reown (WalletConnect) Cloud. Set `ZEROX_API_KEY` or `/swap` refuses and sends nothing. Fee fields are public addresses that receive the 1% inside a swap (`BLARC_FEE_ADDRESS` for EVM, `BLARC_FEE_ADDRESS_SOL` for Solana, `BLARC_FEE_ADDRESS_ROBINHOOD` for Robinhood chain 4663, `BLARC_FEE_ADDRESS_ARC` for Arc chain 5042). Do not put private keys, seed phrases, or real tokens into git. Empty `BLARC_BOT_USERNAME`, `BLARC_SUPPORT_URL`, and `BLARC_UPDATES_URL` fall back to the built-in public defaults.
 4. Install and start:
 
 ```bash
@@ -99,7 +99,7 @@ Optional: register Telegram command suggestions from a machine that has the fill
 npm run bot:commands
 ```
 
-The wallet packages are `@walletconnect/sign-client` and `qrcode`. Live swaps are still not sent.
+The wallet packages are `@walletconnect/sign-client` and `qrcode`. Swaps are user-signed `eth_sendTransaction` requests. Solana is refused. No swap is requested unless the 1% fee is inside it.
 
 ## Files
 
@@ -113,7 +113,8 @@ The wallet packages are `@walletconnect/sign-client` and `qrcode`. Live swaps ar
 - `src/telegram.js` - Telegram send and getUpdates helpers.
 - `src/commands.js` - command handlers.
 - `src/alerts.js` - price-watch commands and the check loop.
-- `src/wallet.js` - WalletConnect pairing, public-address session, and the 1% swap preview.
+- `src/wallet.js` - WalletConnect pairing, public-address session, and user-signed `eth_sendTransaction` requests.
+- `src/swap.js` - 0x swap quote with the 1% fee inside the transaction, or a refusal.
 - `src/dexscreener.js` - read-only DexScreener market data adapter.
 - `src/env.js` - loads `.env` from the working directory without overriding existing variables.
 - `scripts/register-telegram-commands.js` - registers command hints with Telegram.

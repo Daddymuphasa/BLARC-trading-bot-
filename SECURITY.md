@@ -2,7 +2,7 @@
 
 ## Current Scope
 
-The current project includes a static website and a safe-mode Telegram bot MVP for BLARC. It does not provide live trading, wallet creation, private-key custody, authentication, or transaction execution.
+The current project includes a static website and a Telegram bot for BLARC. It does not create wallets, take custody of keys, or sign transactions. A swap is sent to the user's wallet only when the 1% fee is inside that same transaction. Otherwise nothing is requested.
 
 ## Public Frontend Requirements
 
@@ -23,7 +23,7 @@ The current project includes a static website and a safe-mode Telegram bot MVP f
 - Rate-limit future high-volume features before enabling production alerts.
 - Store public wallet addresses only. WalletConnect state on disk is limited to the approved public address and chain id for that chat.
 - Keep WalletConnect relay key material in process memory. Do not write it to `data/` or logs.
-- Do not add bot-side signing, generated wallets, or private-key import without a separate key-management design and security review.
+- Do not add bot-side signing, generated wallets, or private-key import. Swaps are `eth_sendTransaction` requests on the user's WalletConnect session, and only after the 1% fee is checked inside the quoted transaction.
 
 ## Future Bot And Trading Backend Requirements
 
