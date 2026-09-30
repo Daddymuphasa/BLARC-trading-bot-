@@ -154,7 +154,7 @@ contract ReenterToken {
 }
 
 contract BlarcRobinhoodFeeRouterTest {
-    address internal constant FEE = 0x9A47cC17077ea358052FF6233d8aBEe0041E35ed;
+    address internal constant FEE = 0x729241d4d22cb8bD54E9210D1FE1e16b74A2a784;
     uint256 internal constant SELL = 10_000;
     uint256 internal constant FEE_PART = 100;
     uint256 internal constant SWAP_PART = 9_900;

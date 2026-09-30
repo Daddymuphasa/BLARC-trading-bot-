@@ -7,7 +7,7 @@ pragma solidity 0.8.26;
 ///         through the chain Uniswap SwapRouter02. Bought tokens go to the user.
 /// @dev Not deployed. No admin, no upgrade, no fee change, no arbitrary pull.
 ///      Fee recipient is fixed to the BLARC Robinhood wallet
-///      0x9A47cC17077ea358052FF6233d8aBEe0041E35ed.
+///      0x729241d4d22cb8bD54E9210D1FE1e16b74A2a784.
 ///      Deployer passes SwapRouter02 (verified 0xCaf681a66D020601342297493863E78C959E5cb2).
 ///      WETH is read from that router's WETH9() and stored immutable.
 interface IERC20 {
@@ -45,7 +45,7 @@ contract BlarcRobinhoodFeeRouter {
     /// @dev The 0x / bot native-asset sentinel. address(0) is accepted too.
     address public constant NATIVE_SENTINEL = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     /// @dev Robinhood fee wallet. Constructor reverts if a different recipient is passed.
-    address public constant REQUIRED_FEE_RECIPIENT = 0x9A47cC17077ea358052FF6233d8aBEe0041E35ed;
+    address public constant REQUIRED_FEE_RECIPIENT = 0x729241d4d22cb8bD54E9210D1FE1e16b74A2a784;
 
     address public immutable swapRouter;
     address public immutable feeRecipient;
