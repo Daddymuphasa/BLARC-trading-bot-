@@ -12,7 +12,7 @@ import {
   sanitizeWallet,
 } from "./wallet.js";
 import { buildMarketRiskLines, classifyAddress, findBestPair, formatPairSummary } from "./dexscreener.js";
-import { adminIds, maxPriceWatches, supportUrl, updatesUrl } from "./config.js";
+import { adminIds, maxPriceWatches, supportUrl, twitterUrl, updatesUrl } from "./config.js";
 import { ensureChatState, mutateState, readState, upsertChat } from "./state.js";
 import { escapeHtml, sendGuide, sendMessage, sendPhoto, sendPlain, sleep } from "./telegram.js";
 import { handleAlerts, handleUnwatch, handleWatch, handleWatchlist } from "./alerts.js";
@@ -697,6 +697,7 @@ async function handleSupport(message) {
       "<b>Official BLARC Links</b>",
       `Support hub: ${escapeHtml(supportUrl)}`,
       `Updates: ${escapeHtml(updatesUrl)}`,
+      twitterUrl ? `Twitter: ${escapeHtml(twitterUrl)}` : "Twitter: handle not set yet",
       "",
       "Security reminder: BLARC support will never ask for your seed phrase, private key, or Telegram login code.",
     ].join("\n"),
