@@ -3,7 +3,7 @@ import { keccak_256 } from "@noble/hashes/sha3.js";
 import { readFileSync } from "node:fs";
 process.env.BLARC_FEE_ADDRESS = "0x9a47cc17077ea358052ff6233d8abee0041e35ed";
 process.env.BLARC_FEE_ADDRESS_ROBINHOOD = "0x9A47cC17077ea358052FF6233d8aBEe0041E35ed";
-process.env.BLARC_FEE_ADDRESS_ARC = "0x729241d4d22cb8bD54E9210D1FE1e16b74A2a784";
+process.env.BLARC_FEE_ADDRESS_ARC = "0x9A47cC17077ea358052FF6233d8aBEe0041E35ed";
 delete process.env.BLARC_ROBINHOOD_ROUTER;
 
 const {
