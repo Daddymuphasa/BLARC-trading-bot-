@@ -7,3 +7,6 @@ dist/
 !.env.example
 data/*.json
 !data/.gitkeep
+data/*.tmp
+walletconnect.db
+walletconnect.db.*

@@ -1,6 +1,34 @@
 const baseUrl = "https://api.dexscreener.com";
 const requestTimeoutMs = 9000;
 
+export async function findTrackedPair(watch) {
+  const query = typeof watch === "string" ? watch : watch?.query;
+  const chainId = typeof watch === "string" ? "" : String(watch?.chainId || "");
+  const tokenAddress = typeof watch === "string" ? "" : String(watch?.tokenAddress || "");
+
+  // A saved chain + token is the identity. If that lookup throws, is empty,
+  // or has no price, this is a miss. Never search the raw query and substitute
+  // another token (an EVM address is merged across several chains).
+  if (chainId && tokenAddress) {
+    try {
+      const pairs = await getTokenPairs(chainId, tokenAddress);
+      const best = selectBestPair(pairsForTrackedToken(pairs, chainId, tokenAddress));
+      if (isPricedTrackedToken(best, chainId, tokenAddress)) {
+        return best;
+      }
+    } catch {
+      // Refresh failed. Caller treats this as a miss; do not search a different token.
+    }
+    return null;
+  }
+
+  if (!query) {
+    return null;
+  }
+
+  return findBestPair(query);
+}
+
 export async function findBestPair(query) {
   const normalized = String(query || "").trim();
   if (!normalized) {
@@ -110,6 +138,25 @@ export function buildMarketRiskLines(pair) {
 
   lines.push(`Chart: ${escapeHtml(pair.url || "unavailable")}`);
   return { lines, score };
+}
+
+function pairsForTrackedToken(pairs, chainId, tokenAddress) {
+  if (!Array.isArray(pairs)) {
+    return [];
+  }
+  return pairs.filter((pair) => isPricedTrackedToken(pair, chainId, tokenAddress));
+}
+
+function isPricedTrackedToken(pair, chainId, tokenAddress) {
+  const price = Number(pair?.priceUsd);
+  if (!Number.isFinite(price) || price <= 0) {
+    return false;
+  }
+  if (!pair?.chainId || !pair?.baseToken?.address) {
+    return false;
+  }
+  return String(pair.chainId).toLowerCase() === String(chainId).toLowerCase()
+    && String(pair.baseToken.address).toLowerCase() === String(tokenAddress).toLowerCase();
 }
 
 async function findPairsByAddress(address, addressInfo) {
