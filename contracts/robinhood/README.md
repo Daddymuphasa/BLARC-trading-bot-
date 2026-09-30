@@ -28,9 +28,9 @@ Both are set once and stored immutable.
 | Arg | Value |
 | --- | --- |
 | `swapRouter_` | `0xCaf681a66D020601342297493863E78C959E5cb2` (SwapRouter02) |
-| `feeRecipient_` | `0x729241d4d22cb8bD54E9210D1FE1e16b74A2a784` |
+| `feeRecipient_` | `0x9A47cC17077ea358052FF6233d8aBEe0041E35ed` |
 
-The constructor reverts if the fee recipient is any other address. It reads `WETH9()` from the router. Do not pass the general EVM fee wallet.
+The constructor reverts if the fee recipient is any other address. It reads `WETH9()` from the router. The only accepted recipient is `0x9A47cC17077ea358052FF6233d8aBEe0041E35ed`, the same public address as the EVM fee wallet.
 
 These Uniswap addresses were checked with `eth_getCode` on `https://rpc.mainnet.chain.robinhood.com` before they were written down. Code was present. `SwapRouter02.factory()` returned `0x1f7d7550B1b028f7571E69A784071F0205FD2EfA`. `SwapRouter02.WETH9()` returned `0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73`. QuoterV2 `0x33e885eD0Ec9bF04EcfB19341582aADCb4c8A9E7` also had code. The bot quotes with QuoterV2. It does not call the Universal Router.
 
@@ -53,7 +53,7 @@ forge create contracts/robinhood/BlarcRobinhoodFeeRouter.sol:BlarcRobinhoodFeeRo
   --broadcast \
   --constructor-args \
   0xCaf681a66D020601342297493863E78C959E5cb2 \
-  0x729241d4d22cb8bD54E9210D1FE1e16b74A2a784
+  0x9A47cC17077ea358052FF6233d8aBEe0041E35ed
 ```
 
 Compiler settings in `foundry.toml`: solc 0.8.26, optimizer on, 200 runs, Cancun.
