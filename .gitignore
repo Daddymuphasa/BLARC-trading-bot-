@@ -12,3 +12,7 @@ walletconnect.db
 walletconnect.db.*
 data/cards/*
 !data/cards/.gitkeep
+
+out/
+cache/
+broadcast/

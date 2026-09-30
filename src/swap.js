@@ -1,4 +1,4 @@
-import { FEE_BPS, feeWalletForChain, hasWalletSession, isEvmAddress, requestWalletTransaction } from "./wallet.js";
+import { FEE_BPS, ROBINHOOD_CHAIN_ID, feeWalletForChain, hasWalletSession, isEvmAddress, requestWalletTransaction } from "./wallet.js";
 import { escapeHtml } from "./telegram.js";
 
 const NATIVE = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
@@ -79,6 +79,7 @@ const KNOWN = {
   },
   4663: {
     ETH: [NATIVE, 18],
+    WETH: ["0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73", 18],
   },
 };
 
@@ -171,6 +172,9 @@ export async function executeSwap({ chatId, wallet, amount, tokenIn, tokenOut })
   }
   if (fee.family === "sol") {
     return refuse("Solana swaps are refused. The 1% cannot be put in the same Solana transaction, so nothing was signed.");
+  }
+  if (fee.chainId === ROBINHOOD_CHAIN_ID) {
+    return executeRobinhoodSwap({ chatId, wallet, amount, tokenIn, tokenOut, fee });
   }
   if (!ZEROX_SWAP_CHAIN_IDS.has(fee.chainId)) {
     return refuse("This chain has no verified in-swap fee quote, so no transaction was built.");
@@ -309,7 +313,7 @@ async function readDecimals(chainId, token) {
   }
   const response = await fetch(rpc, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", accept: "application/json", "user-agent": "blarc-bot" },
     body: JSON.stringify({
       jsonrpc: "2.0",
       id: 1,
@@ -535,4 +539,370 @@ function safeError(error) {
     return "The wallet did not sign.";
   }
   return message.slice(0, 180);
+}
+
+const ROBINHOOD_FEE_RECIPIENT = "0x729241d4d22cb8bD54E9210D1FE1e16b74A2a784";
+const ROBINHOOD_WETH = "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73";
+const ROBINHOOD_QUOTER_V2 = "0x33e885eD0Ec9bF04EcfB19341582aADCb4c8A9E7";
+const ROBINHOOD_V3_FEES = [100, 500, 3000, 10000];
+const ROBINHOOD_SWAP_SELECTOR = "51e820e7";
+const ROBINHOOD_QUOTE_SELECTOR = "c6a5026a";
+
+export function robinhoodFeeSplit(sellAmount) {
+  let amount;
+  try {
+    amount = BigInt(sellAmount);
+  } catch {
+    return null;
+  }
+  if (amount <= 0n) {
+    return null;
+  }
+  const fee = expectedFeeBaseUnits(amount);
+  if (fee <= 0n || fee >= amount) {
+    return null;
+  }
+  return { fee, swapAmount: amount - fee };
+}
+
+export function minimumOut(quotedOut) {
+  let out;
+  try {
+    out = BigInt(quotedOut);
+  } catch {
+    return 0n;
+  }
+  if (out <= 0n) {
+    return 0n;
+  }
+  return (out * BigInt(10_000 - SLIPPAGE_BPS)) / 10_000n;
+}
+
+export function chooseV3Tier(quotes) {
+  let best = null;
+  for (const quote of quotes || []) {
+    if (!quote) {
+      continue;
+    }
+    let amountOut;
+    try {
+      amountOut = BigInt(quote.amountOut);
+    } catch {
+      continue;
+    }
+    const fee = Number(quote.fee);
+    if (amountOut <= 0n || !Number.isInteger(fee) || fee <= 0) {
+      continue;
+    }
+    if (!best || amountOut > best.amountOut || (amountOut === best.amountOut && fee < best.fee)) {
+      best = { fee, amountOut };
+    }
+  }
+  return best;
+}
+
+export function robinhoodRouterRefusal(routerAddress, bytecode) {
+  if (!isEvmAddress(String(routerAddress || "").trim())) {
+    return "Fee cannot be included, swap not sent. The Robinhood fee router is not set.";
+  }
+  if (!bytecodePresent(bytecode)) {
+    return "Fee cannot be included, swap not sent. The Robinhood fee router has no code.";
+  }
+  return "";
+}
+
+export function encodeRobinhoodSwapCall({ tokenIn, tokenOut, poolFee, amountIn, amountOutMinimum, deadline }) {
+  return `0x${ROBINHOOD_SWAP_SELECTOR}${encodeAddress(tokenIn)}${encodeAddress(tokenOut)}${encodeWord(poolFee)}${encodeWord(amountIn)}${encodeWord(amountOutMinimum)}${encodeWord(deadline)}`;
+}
+
+async function executeRobinhoodSwap({ chatId, wallet, amount, tokenIn, tokenOut, fee }) {
+  if (String(fee.address || "").toLowerCase() !== ROBINHOOD_FEE_RECIPIENT.toLowerCase()) {
+    return refuse("The Robinhood fee wallet does not match the router recipient.");
+  }
+
+  const router = String(process.env.BLARC_ROBINHOOD_ROUTER || "").trim();
+  let routerCode = "0x";
+  if (isEvmAddress(router)) {
+    try {
+      routerCode = await ethRpc(ROBINHOOD_CHAIN_ID, "eth_getCode", [router, "latest"]);
+    } catch (error) {
+      console.error("robinhood router code failed:", error?.code || "rpc");
+      return refuse("The Robinhood fee router could not be read.");
+    }
+  }
+  const routerRefusal = robinhoodRouterRefusal(router, routerCode);
+  if (routerRefusal) {
+    return routerRefusal;
+  }
+  if (!hasWalletSession(chatId)) {
+    return refuse("The WalletConnect session is not active. Run /connect again. Nothing was signed.");
+  }
+
+  let sell;
+  let buy;
+  try {
+    sell = await resolveRobinhoodToken(tokenIn);
+    buy = await resolveRobinhoodToken(tokenOut);
+  } catch (error) {
+    console.error("swap token read failed:", error?.code || "read");
+    return refuse("The token amount could not be read on this chain, so no transaction was built.");
+  }
+  if (!sell || !buy) {
+    return text(
+      "Swap refused. Use a token contract address on this chain, or a known symbol such as ETH, WETH, USDC, USDT, or DAI where that symbol is listed. Nothing was sent.",
+    );
+  }
+  if (sell.address.toLowerCase() === buy.address.toLowerCase()) {
+    return text("Choose two different tokens. Nothing was sent.");
+  }
+  const poolIn = robinhoodPoolToken(sell);
+  const poolOut = robinhoodPoolToken(buy);
+  if (poolIn.toLowerCase() === poolOut.toLowerCase()) {
+    return refuse("Native ETH and WETH are the same asset on this router, so no pool swap was built.");
+  }
+
+  const sellAmount = toBaseUnits(amount, sell.decimals);
+  if (sellAmount == null) {
+    return text("Swap refused. That amount has more decimal places than the token. Nothing was sent.");
+  }
+  const split = robinhoodFeeSplit(sellAmount);
+  if (!split) {
+    return refuse("1% of this amount rounds to zero in token units.");
+  }
+
+  let best;
+  try {
+    best = await quoteRobinhoodV3({ tokenIn: poolIn, tokenOut: poolOut, amountIn: split.swapAmount });
+  } catch (error) {
+    console.error("robinhood quote failed:", error?.code || "quote");
+    if (error?.code === "quoter") {
+      return refuse("The Robinhood quoter has no code, so no swap was built.");
+    }
+    return refuse("The swap quote failed, so no transaction was built.");
+  }
+  if (!best) {
+    return refuse("No Uniswap v3 pool quoted this pair.");
+  }
+  const amountOutMinimum = minimumOut(best.amountOut);
+  if (amountOutMinimum <= 0n) {
+    return refuse("The quoted output is too small after 1% slippage.");
+  }
+
+  const native = sell.address.toLowerCase() === NATIVE;
+  if (!native) {
+    let current;
+    try {
+      current = await readErc20Allowance(ROBINHOOD_CHAIN_ID, sell.address, wallet.address, router);
+    } catch (error) {
+      console.error("robinhood allowance failed:", error?.code || "allowance");
+      return refuse("The token allowance could not be read, so nothing was signed.");
+    }
+    if (current < sellAmount) {
+      return requestApproval({
+        chatId,
+        wallet,
+        sell,
+        allowance: { spender: router, actual: current.toString() },
+        allowanceTarget: router,
+        sellAmount,
+      });
+    }
+  }
+
+  let deadline;
+  try {
+    const block = await ethRpc(ROBINHOOD_CHAIN_ID, "eth_getBlockByNumber", ["latest", false]);
+    deadline = BigInt(block.timestamp) + 600n;
+  } catch (error) {
+    console.error("robinhood block failed:", error?.code || "block");
+    return refuse("The swap quote failed, so no transaction was built.");
+  }
+
+  const data = encodeRobinhoodSwapCall({
+    tokenIn: native ? NATIVE : sell.address,
+    tokenOut: buy.address.toLowerCase() === NATIVE ? NATIVE : buy.address,
+    poolFee: best.fee,
+    amountIn: sellAmount,
+    amountOutMinimum,
+    deadline,
+  });
+  const tx = {
+    from: wallet.address,
+    to: router,
+    data,
+    value: native ? `0x${sellAmount.toString(16)}` : "0x0",
+  };
+  try {
+    await ethRpc(ROBINHOOD_CHAIN_ID, "eth_call", [tx, "latest"]);
+    const estimated = await ethRpc(ROBINHOOD_CHAIN_ID, "eth_estimateGas", [tx, "latest"]);
+    const gas = (BigInt(estimated) * 12n) / 10n;
+    if (gas > 0n) {
+      tx.gas = `0x${gas.toString(16)}`;
+    }
+  } catch (error) {
+    console.error("robinhood simulation failed:", error?.code || "simulation");
+    return refuse("The router simulation failed.");
+  }
+
+  let hash;
+  try {
+    hash = await requestWalletTransaction(chatId, wallet.chainId, tx);
+  } catch (error) {
+    console.error("swap signature failed:", safeError(error));
+    return text(`Swap not sent. ${escapeHtml(safeError(error))} Nothing was signed by BLARC.`);
+  }
+  return text(
+    robinhoodSignedMessage({
+      wallet,
+      sell,
+      buy,
+      amount,
+      fee,
+      sellAmount,
+      quotedOut: best.amountOut,
+      amountOutMinimum,
+      router,
+      poolFee: best.fee,
+      hash,
+    }),
+  );
+}
+
+async function resolveRobinhoodToken(ref) {
+  const raw = String(ref || "").trim();
+  const lower = raw.toLowerCase();
+  if (lower === NATIVE || lower === "0x0000000000000000000000000000000000000000") {
+    return { address: NATIVE, decimals: 18, label: "ETH" };
+  }
+  return resolveToken(ROBINHOOD_CHAIN_ID, raw);
+}
+
+function robinhoodPoolToken(token) {
+  if (String(token.address).toLowerCase() === NATIVE) {
+    return ROBINHOOD_WETH;
+  }
+  return token.address;
+}
+
+async function quoteRobinhoodV3({ tokenIn, tokenOut, amountIn }) {
+  const code = await ethRpc(ROBINHOOD_CHAIN_ID, "eth_getCode", [ROBINHOOD_QUOTER_V2, "latest"]);
+  if (!bytecodePresent(code)) {
+    const error = new Error("quoter");
+    error.code = "quoter";
+    throw error;
+  }
+  const quotes = [];
+  for (const fee of ROBINHOOD_V3_FEES) {
+    const data = `0x${ROBINHOOD_QUOTE_SELECTOR}${encodeAddress(tokenIn)}${encodeAddress(tokenOut)}${encodeWord(amountIn)}${encodeWord(fee)}${encodeWord(0)}`;
+    try {
+      const result = await ethRpc(ROBINHOOD_CHAIN_ID, "eth_call", [{ to: ROBINHOOD_QUOTER_V2, data }, "latest"]);
+      const amountOut = parseQuotedAmount(result);
+      if (amountOut != null) {
+        quotes.push({ fee, amountOut });
+      }
+    } catch {
+      // This fee tier has no pool. Try the next one.
+    }
+  }
+  return chooseV3Tier(quotes);
+}
+
+async function readErc20Allowance(chainId, token, owner, spender) {
+  const data = `0xdd62ed3e${encodeAddress(owner)}${encodeAddress(spender)}`;
+  const result = await ethRpc(chainId, "eth_call", [{ to: token, data }, "latest"]);
+  if (!/^0x[0-9a-fA-F]{64}$/.test(String(result || ""))) {
+    const error = new Error("allowance");
+    error.code = "allowance";
+    throw error;
+  }
+  return BigInt(result);
+}
+
+async function ethRpc(chainId, method, params) {
+  const rpc = READ_RPC[chainId];
+  if (!rpc) {
+    const error = new Error("no rpc");
+    error.code = "no-rpc";
+    throw error;
+  }
+  const response = await fetch(rpc, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      accept: "application/json",
+      "user-agent": "blarc-bot",
+    },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok) {
+    const error = new Error("rpc http");
+    error.code = `http-${response.status}`;
+    throw error;
+  }
+  const body = await response.json();
+  if (body.error || body.result == null) {
+    const error = new Error("rpc");
+    error.code = "rpc";
+    throw error;
+  }
+  return body.result;
+}
+
+function robinhoodSignedMessage({ wallet, sell, buy, amount, fee, sellAmount, quotedOut, amountOutMinimum, router, poolFee, hash }) {
+  const buyAmount = formatUnits(quotedOut, buy.decimals);
+  const minBuy = formatUnits(amountOutMinimum, buy.decimals);
+  const feeAmount = formatUnits(robinhoodFeeSplit(sellAmount).fee, sell.decimals);
+  const lines = [
+    "<b>BLARC swap</b>",
+    "Your wallet was asked to sign one Robinhood swap through the BLARC fee router. BLARC did not sign and does not hold a key.",
+    "",
+    `Wallet: <code>${escapeHtml(wallet.address)}</code>`,
+    `Chain: <code>${escapeHtml(wallet.chainId)}</code>`,
+    `Router: <code>${escapeHtml(router)}</code>`,
+    `Sell: <b>${escapeHtml(amount)} ${escapeHtml(sell.label)}</b>`,
+    `Buy: <b>${escapeHtml(buy.label)}</b> (about ${escapeHtml(buyAmount)})`,
+    `Minimum bought, after 1% slippage: <b>${escapeHtml(minBuy)}</b>`,
+    `Pool fee tier: <code>${escapeHtml(poolFee)}</code>`,
+    `Fee: <b>1%</b> = <b>${escapeHtml(feeAmount)} ${escapeHtml(sell.label)}</b>`,
+    `Fee wallet: <code>${escapeHtml(fee.address)}</code>`,
+    "That fee is inside the router transaction you were asked to sign. There is no fee-less path.",
+  ];
+  const txHash = String(hash || "");
+  if (/^0x[a-fA-F0-9]{64}$/.test(txHash)) {
+    lines.push(`Transaction: <code>${escapeHtml(txHash)}</code>`);
+    const link = explorerTx(fee.chainId, txHash);
+    if (link) {
+      lines.push(escapeHtml(link));
+    }
+  } else {
+    lines.push("The wallet did not return a transaction hash. If you rejected the prompt, nothing was broadcast.");
+  }
+  return lines.join("\n");
+}
+
+function encodeAddress(addr) {
+  return String(addr).slice(2).toLowerCase().padStart(64, "0");
+}
+
+function encodeWord(value) {
+  return BigInt(value).toString(16).padStart(64, "0");
+}
+
+function parseQuotedAmount(result) {
+  const hex = String(result || "");
+  if (!/^0x[0-9a-fA-F]{64,}$/.test(hex)) {
+    return null;
+  }
+  try {
+    const amount = BigInt(hex.slice(0, 66));
+    return amount > 0n ? amount : null;
+  } catch {
+    return null;
+  }
+}
+
+function bytecodePresent(code) {
+  const value = String(code || "");
+  return /^0x[0-9a-fA-F]+$/.test(value) && !/^0x0*$/.test(value);
 }

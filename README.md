@@ -23,7 +23,7 @@ BLARC is an Arc-native Telegram DeFi trading bot project with a responsive produ
 - `/connect` starts a non-custodial WalletConnect pairing and sends a QR plus pairing URI. Approval saves only the public address and chain id.
 - `/disconnect` forgets that public address.
 - `/fee` shows the 1% (100 bps) fee and which public wallet applies to the connected chain.
-- `/swap <amount> <from> <to>` asks the user's wallet to sign one swap. The 1% is inside that transaction, paid to the chain's fee wallet. If the fee cannot be included, nothing is signed. Solana swaps are refused.
+- `/swap <amount> <from> <to>` asks the user's wallet to sign one swap. The 1% is inside that transaction, paid to the chain's fee wallet. If the fee cannot be included, nothing is signed. Solana swaps are refused. On Robinhood (chain 4663) the signed call is the BLARC fee router, not a direct 0x swap. That router is not deployed yet; until `BLARC_ROBINHOOD_ROUTER` is set to a contract with code, the swap is refused.
 - `/wallet <address>` add a read-only public wallet.
 - `/copy <address>` watch a public Solana or EVM wallet. Seeds and private keys are rejected. A real trade gets Copy and Skip buttons.
 - `/copies`, `/uncopy`, `/auto on|off`, `/goal <percent>`, `/risk low|average|high|daredevil`.
@@ -81,7 +81,7 @@ Requires Node.js 20 or newer. The bot is plain Node ESM and starts with `node sr
 
 1. Clone this repository and enter its directory.
 2. Create a bot with BotFather and copy the token.
-3. Copy `.env.example` to `.env` and fill it in. `.env` is gitignored. Set `TELEGRAM_BOT_TOKEN`. For pairing, set `WALLETCONNECT_PROJECT_ID` from Reown (WalletConnect) Cloud. Set `ZEROX_API_KEY` or `/swap` and copy trades refuse and send nothing. Set `BLARC_EVM_RPC_URL` and `BLARC_SOLANA_RPC_URL` or copy watching stays saved without reading trades. Fee fields are public addresses that receive the 1% inside a swap (`BLARC_FEE_ADDRESS` for EVM, `BLARC_FEE_ADDRESS_SOL` for Solana, `BLARC_FEE_ADDRESS_ROBINHOOD` for Robinhood chain 4663, `BLARC_FEE_ADDRESS_ARC` for Arc chain 5042). Do not put private keys, seed phrases, or real tokens into git. Empty `BLARC_BOT_USERNAME`, `BLARC_SUPPORT_URL`, and `BLARC_UPDATES_URL` fall back to the built-in public defaults.
+3. Copy `.env.example` to `.env` and fill it in. `.env` is gitignored. Set `TELEGRAM_BOT_TOKEN`. For pairing, set `WALLETCONNECT_PROJECT_ID` from Reown (WalletConnect) Cloud. Set `ZEROX_API_KEY` or `/swap` and copy trades refuse and send nothing. Set `BLARC_EVM_RPC_URL` and `BLARC_SOLANA_RPC_URL` or copy watching stays saved without reading trades. Fee fields are public addresses that receive the 1% inside a swap (`BLARC_FEE_ADDRESS` for EVM, `BLARC_FEE_ADDRESS_SOL` for Solana, `BLARC_FEE_ADDRESS_ROBINHOOD` for Robinhood chain 4663, `BLARC_FEE_ADDRESS_ARC` for Arc chain 5042). Robinhood swaps also need `BLARC_ROBINHOOD_ROUTER` after that contract is deployed. It is empty on purpose until then. Do not put private keys, seed phrases, or real tokens into git. Empty `BLARC_BOT_USERNAME`, `BLARC_SUPPORT_URL`, and `BLARC_UPDATES_URL` fall back to the built-in public defaults.
 4. Install and start:
 
 ```bash
@@ -124,12 +124,13 @@ The wallet packages are `@walletconnect/sign-client` and `qrcode`. Swaps are use
 - `src/createWallet.js` - in-memory 12-word wallet and public address derivation. No key is returned except the one-time mnemonic to the reveal step.
 - `src/createCommand.js` - `/create` warning, confirmation button, one-time seed send, then public-address save.
 - `src/wallet.js` - WalletConnect pairing, public-address session, and user-signed `eth_sendTransaction` requests.
-- `src/swap.js` - 0x swap quote with the 1% fee inside the transaction, or a refusal.
+- `src/swap.js` - 0x swap quote with the 1% fee inside the transaction, or a refusal. Chain 4663 calls the Robinhood fee router instead.
 - `src/copy.js` - public-wallet copy watches. Execution only calls the fee-aware swap.
 - `src/dexscreener.js` - read-only DexScreener market data adapter.
 - `src/cards.js` - one JPEG card per chain and token contract, built with sharp from the DexScreener pair and the local BLARC mascot.
 - `src/env.js` - loads `.env` from the working directory without overriding existing variables.
 - `scripts/register-telegram-commands.js` - registers command hints with Telegram.
 - `.env.example` - environment variable names. Copy to `.env` and fill in locally.
+- `contracts/robinhood/` - undeployed Robinhood fee router. See `contracts/robinhood/README.md`. There is no contract address yet.
 - `Dockerfile` - Node 20 image that runs `node src/bot.js`.
 - `docker-compose.yml` - runs the bot with `.env` and a persistent `./data` volume.

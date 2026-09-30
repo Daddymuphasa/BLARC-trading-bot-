@@ -2,7 +2,7 @@
 
 ## Current Scope
 
-The current project includes a static website and a Telegram bot for BLARC. It does not take custody of keys or sign transactions. `/create` can show a new seed once in the chat after confirmation, then discards it. A swap is sent to the user's wallet only when the 1% fee is inside that same transaction. Otherwise nothing is requested.
+The current project includes a static website and a Telegram bot for BLARC. It does not take custody of keys or sign transactions. `/create` can show a new seed once in the chat after confirmation, then discards it. A swap is sent to the user's wallet only when the 1% fee is inside that same transaction. Otherwise nothing is requested. On Robinhood chain 4663 that transaction is a call to the BLARC fee router. If `BLARC_ROBINHOOD_ROUTER` is unset or has no code, nothing is sent and there is no direct-swap fallback. The router is not deployed in this repo.
 
 ## Public Frontend Requirements
 

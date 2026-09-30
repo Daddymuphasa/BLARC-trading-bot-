@@ -8,7 +8,7 @@
     "start": "node src/bot.js",
     "bot": "node src/bot.js",
     "bot:commands": "node scripts/register-telegram-commands.js",
-    "check": "node --check src/bot.js && node --check src/config.js && node --check src/state.js && node --check src/telegram.js && node --check src/alerts.js && node --check src/commands.js && node --check src/createCommand.js && node --check src/createWallet.js && node --check src/wallet.js && node --check src/swap.js && node --check src/copy.js && node --check src/cards.js && node --check src/dexscreener.js && node --check src/env.js && node --check scripts/register-telegram-commands.js && node --check scripts/check-create-wallet.js && node --check script.js && node scripts/check-create-wallet.js"
+    "check": "node --check src/bot.js && node --check src/config.js && node --check src/state.js && node --check src/telegram.js && node --check src/alerts.js && node --check src/commands.js && node --check src/createCommand.js && node --check src/createWallet.js && node --check src/wallet.js && node --check src/swap.js && node --check src/copy.js && node --check src/cards.js && node --check src/dexscreener.js && node --check src/env.js && node --check scripts/register-telegram-commands.js && node --check scripts/check-create-wallet.js && node --check script.js && node scripts/check-create-wallet.js && node --check scripts/check-robinhood-router.js && node scripts/check-robinhood-router.js"
   },
   "engines": {
     "node": ">=20"

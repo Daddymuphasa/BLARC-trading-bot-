@@ -372,8 +372,8 @@ async function handleFee(message) {
   lines.push("Solana swaps are refused. The 1% cannot be put in the same Solana transaction here, so nothing is signed.");
   lines.push(
     swapApiKey()
-      ? "On Arc, Robinhood, and other supported EVM chains, /swap asks your wallet to sign only when the quote puts this 1% in that transaction."
-      : "ZEROX_API_KEY is not set. Fee cannot be included, swap not sent.",
+      ? "On Arc and other supported EVM chains, /swap asks your wallet to sign only when the quote puts this 1% in that transaction. On Robinhood (chain 4663), /swap asks you to sign the BLARC fee router. If that router is not set, nothing is sent."
+      : "ZEROX_API_KEY is not set, so Arc and other 0x chains refuse the swap. Robinhood (chain 4663) uses the BLARC fee router and refuses if that router is not set.",
   );
   await sendMessage(message.chat.id, lines.join("\n"));
 }
