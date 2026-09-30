@@ -59,33 +59,47 @@ For any future trading backend, add threat modeling before implementation. At mi
 
 ## Local Preview
 
-Open `index.html` directly in a browser, or run a tiny local server:
+The site is static (`index.html`, `styles.css`, `script.js`, and `assets/`). It does not need the bot process. Open `index.html` in a browser, or serve this directory with any static file server. For a quick local check:
 
 ```bash
 python -m http.server 4173
 ```
 
-Then visit `http://localhost:4173`.
+Then visit `http://localhost:4173`. On a VPS, point nginx, Caddy, or another static server at the same directory.
 
 ## Run The Telegram Bot
 
-1. Create a bot with BotFather. The current official handle is `@theBLARCbot`.
-2. Copy `.env.example` to `.env` and set `TELEGRAM_BOT_TOKEN`. For pairing, set `WALLETCONNECT_PROJECT_ID` from Reown Cloud. For the fee line, set the public `BLARC_FEE_ADDRESS`. Do not put private keys in `.env`.
-3. In your shell, export the variables from `.env`.
-4. Install dependencies and start the bot:
+Requires Node.js 20 or newer. The bot is plain Node ESM and starts with `node src/bot.js`.
+
+1. Clone this repository and enter its directory.
+2. Create a bot with BotFather and copy the token.
+3. Copy `.env.example` to `.env` and fill it in. `.env` is gitignored. Set `TELEGRAM_BOT_TOKEN`. For pairing, set `WALLETCONNECT_PROJECT_ID` from Reown (WalletConnect) Cloud. Fee fields are public addresses that receive the 1% inside a swap (`BLARC_FEE_ADDRESS`, `BLARC_FEE_ADDRESS_SOL`, `BLARC_FEE_ADDRESS_ROBINHOOD`, `BLARC_FEE_ADDRESS_ARC`). Do not put private keys, seed phrases, or real tokens into git. Empty `BLARC_BOT_USERNAME`, `BLARC_SUPPORT_URL`, and `BLARC_UPDATES_URL` fall back to the built-in public defaults.
+4. Install and start:
 
 ```bash
 npm install
 npm start
 ```
 
-The wallet packages are `@walletconnect/sign-client` and `qrcode`. Live swaps are still not sent.
+`npm start` loads `.env` from the current working directory. You do not need to export the variables yourself.
 
-Register Telegram command suggestions:
+Or run the same process in Docker. The image is Node 20, reads env from `.env` (nothing is baked into the image), mounts `./data` so state can be written, and restarts unless you stop it:
+
+```bash
+docker compose up -d --build
+```
+
+Later starts can use `docker compose up -d`.
+
+Runtime state is `data/blarc-state.json` (saved wallets, watches, and settings). That directory must persist across restarts and deploys. The Compose file mounts `./data` for this. Do not delete it if you want that state to survive. Back it up with the host.
+
+Optional: register Telegram command suggestions from a machine that has the filled-in `.env`:
 
 ```bash
 npm run bot:commands
 ```
+
+The wallet packages are `@walletconnect/sign-client` and `qrcode`. Live swaps are still not sent.
 
 ## Files
 
@@ -97,4 +111,6 @@ npm run bot:commands
 - `src/wallet.js` - WalletConnect pairing, public-address session, and the 1% swap preview.
 - `src/dexscreener.js` - read-only DexScreener market data adapter.
 - `scripts/register-telegram-commands.js` - registers command hints with Telegram.
-- `.env.example` - required bot environment variables.
+- `.env.example` - environment variable names. Copy to `.env` and fill in locally.
+- `Dockerfile` - Node 20 image that runs `node src/bot.js`.
+- `docker-compose.yml` - runs the bot with `.env` and a persistent `./data` volume.
