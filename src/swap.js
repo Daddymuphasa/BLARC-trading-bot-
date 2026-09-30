@@ -1,4 +1,5 @@
 import { FEE_BPS, ROBINHOOD_CHAIN_ID, feeWalletForChain, hasWalletSession, isEvmAddress, requestWalletTransaction } from "./wallet.js";
+import { executeSolanaSwap } from "./solanaSwap.js";
 import { escapeHtml } from "./telegram.js";
 
 const NATIVE = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
@@ -171,7 +172,7 @@ export async function executeSwap({ chatId, wallet, amount, tokenIn, tokenOut })
     return refuse("This chain does not map to a fee wallet.");
   }
   if (fee.family === "sol") {
-    return refuse("Solana swaps are refused. The 1% cannot be put in the same Solana transaction, so nothing was signed.");
+    return executeSolanaSwap({ chatId, wallet, amount, tokenIn, tokenOut, fee });
   }
   if (fee.chainId === ROBINHOOD_CHAIN_ID) {
     return executeRobinhoodSwap({ chatId, wallet, amount, tokenIn, tokenOut, fee });

@@ -23,7 +23,7 @@ BLARC is an Arc-native Telegram DeFi trading bot project with a responsive produ
 - `/connect` starts a non-custodial WalletConnect pairing and sends a QR plus pairing URI. Approval saves only the public address and chain id.
 - `/disconnect` forgets that public address.
 - `/fee` shows the 1% (100 bps) fee and which public wallet applies to the connected chain.
-- `/swap <amount> <from> <to>` asks the user's wallet to sign one swap. The 1% is inside that transaction, paid to the chain's fee wallet. If the fee cannot be included, nothing is signed. Solana swaps are refused. On Robinhood (chain 4663) the signed call is the BLARC fee router, not a direct 0x swap. That router is not deployed yet; until `BLARC_ROBINHOOD_ROUTER` is set to a contract with code, the swap is refused.
+- `/swap <amount> <from> <to>` asks the user's wallet to sign one swap. The 1% is inside that transaction, paid to the chain's fee wallet. If the fee cannot be included, nothing is signed. On Solana the 1% is a transfer to the Solana fee wallet inside that same transaction. If the transfer cannot be added, nothing is signed. On Robinhood (chain 4663) the signed call is the BLARC fee router, not a direct 0x swap. That router is not deployed yet; until `BLARC_ROBINHOOD_ROUTER` is set to a contract with code, the swap is refused.
 - `/wallet <address>` add a read-only public wallet.
 - `/copy <address>` watch a public Solana or EVM wallet. Seeds and private keys are rejected. A real trade gets Copy and Skip buttons.
 - `/copies`, `/uncopy`, `/auto on|off`, `/goal <percent>`, `/risk low|average|high|daredevil`.
@@ -107,7 +107,7 @@ Optional: register Telegram command suggestions from a machine that has the fill
 npm run bot:commands
 ```
 
-The wallet packages are `@walletconnect/sign-client` and `qrcode`. Swaps are user-signed `eth_sendTransaction` requests. Solana is refused. No swap is requested unless the 1% fee is inside it.
+The wallet packages are `@walletconnect/sign-client` and `qrcode`. EVM swaps are user-signed `eth_sendTransaction` requests. Solana swaps are user-signed `solana_signAndSendTransaction` requests with a 1% transfer in the same transaction. No swap is requested unless the 1% fee is inside it.
 
 ## Files
 

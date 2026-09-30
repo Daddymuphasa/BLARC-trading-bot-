@@ -10,7 +10,9 @@ import {
   parseSwapCommand,
   publicWalletError,
   publicWalletFromSession,
+  publicSolanaFromSession,
   sanitizeWallet,
+  SOLANA_SENTINEL_CHAIN_ID,
 } from "./wallet.js";
 import { buildMarketRiskLines, classifyAddress, findBestPair, formatPairSummary } from "./dexscreener.js";
 import { adminIds, maxPriceWatches, supportUrl, twitterUrl, updatesUrl } from "./config.js";
@@ -257,10 +259,41 @@ async function finishPairing(chatId, generation, session) {
 
   const account = publicWalletFromSession(session);
   if (!account) {
-    await disconnectTopic(session?.topic);
+    const solana = publicSolanaFromSession(session);
+    if (!solana) {
+      await disconnectTopic(session?.topic);
+      await sendMessage(
+        chatId,
+        "The wallet did not share an EVM public address, so nothing was saved. Pair again from a wallet that can share an Ethereum account. Do not paste a seed phrase or private key.",
+      );
+      return;
+    }
+    try {
+      await mutateState((state) => {
+        const chat = ensureChatState(state, chatId);
+        chat.wallet = { address: solana.address, chainId: SOLANA_SENTINEL_CHAIN_ID };
+      });
+      await adoptSession(chatId, session.topic);
+    } catch (error) {
+      await disconnectTopic(session?.topic);
+      console.error("WalletConnect address save failed:", publicWalletError(error));
+      await sendMessage(
+        chatId,
+        "The wallet approved, but the public address could not be saved. Nothing secret was stored. Run /connect again.",
+      );
+      return;
+    }
     await sendMessage(
       chatId,
-      "The wallet did not share an EVM public address, so nothing was saved. Pair again from a wallet that can share an Ethereum account. Do not paste a seed phrase or private key.",
+      [
+        "<b>Wallet connected</b>",
+        `Address: <code>${escapeHtml(solana.address)}</code>`,
+        "Chain: <code>Solana</code>",
+        "",
+        "Saved the public address only. Your keys stay in your wallet app.",
+        "Use /swap to sign a trade. The 1% fee is a transfer inside that same transaction, or nothing is sent.",
+        "/disconnect forgets this address.",
+      ].join("\n"),
     );
     return;
   }
@@ -370,7 +403,7 @@ async function handleFee(message) {
       ? `Solana: <code>${escapeHtml(status.sol)}</code>`
       : "Solana fee wallet is not set.",
   );
-  lines.push("Solana swaps are refused. The 1% cannot be put in the same Solana transaction here, so nothing is signed.");
+  lines.push("Solana swaps add a 1% transfer to that wallet inside the same transaction you sign. If that transfer cannot be added, nothing is signed.");
   lines.push(
     swapApiKey()
       ? "On Arc and other supported EVM chains, /swap asks your wallet to sign only when the quote puts this 1% in that transaction. On Robinhood (chain 4663), /swap asks you to sign the BLARC fee router. If that router is not set, nothing is sent."
@@ -744,7 +777,7 @@ async function handleAbout(message) {
       "Current bot status: safe MVP.",
       "Wallet pairing is non-custodial: /connect saves a public address only. /swap asks your wallet to sign. BLARC never holds a key.",
       "/create can show a new seed once in this chat after you confirm. It is not stored. Import it into your own wallet and /connect to sign.",
-      "A swap is requested only when the 1% fee is inside that same transaction. Otherwise nothing is sent. Solana swaps are refused.",
+      "A swap is requested only when the 1% fee is inside that same transaction. Otherwise nothing is sent. On Solana that fee is a transfer instruction in the swap transaction.",
       "Copy trading watches a public wallet. Auto still asks you to sign. BLARC does not sign and does not hold a key.",
     ].join("\n"),
   );

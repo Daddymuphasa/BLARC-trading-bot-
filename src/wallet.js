@@ -7,6 +7,9 @@ export const FEE_BPS = 100;
 const EVM_METHODS = ["eth_sendTransaction", "personal_sign"];
 const EVM_EVENTS = ["chainChanged", "accountsChanged"];
 const OPTIONAL_CHAINS = ["eip155:1", "eip155:8453", "eip155:42161", "eip155:10", "eip155:137", "eip155:56", "eip155:4663", "eip155:5042"];
+const SOLANA_WC_CHAIN = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
+export const SOLANA_SENTINEL_CHAIN_ID = "eip155:999999999991";
+const SOLANA_SIGN_METHODS = ["solana_signTransaction", "solana_signAndSendTransaction"];
 
 let clientPromise;
 const sessionTopicByChat = new Map();
@@ -144,6 +147,82 @@ export async function requestWalletTransaction(chatId, chainId, tx) {
   );
 }
 
+
+export function publicSolanaFromSession(session) {
+  const accounts = session?.namespaces?.solana?.accounts;
+  if (!Array.isArray(accounts)) {
+    return null;
+  }
+  for (const account of accounts) {
+    const parts = String(account).split(":");
+    if (parts.length < 3 || parts[0] !== "solana") {
+      continue;
+    }
+    const chainId = `${parts[0]}:${parts[1]}`;
+    const address = parts.slice(2).join(":");
+    if (chainId === SOLANA_WC_CHAIN && isSolanaAddress(address)) {
+      return { address, chainId };
+    }
+  }
+  return null;
+}
+
+export async function solanaSignBlocker(chatId, userAddress) {
+  try {
+    await requireSolanaSession(chatId, userAddress);
+    return "";
+  } catch (error) {
+    return String(error?.message || "The WalletConnect session is not active. Run /connect again. Nothing was signed.");
+  }
+}
+
+export async function requestSolanaTransaction(chatId, userAddress, transaction) {
+  const topic = await requireSolanaSession(chatId, userAddress);
+  const client = await getClient();
+  return withTimeout(
+    client.request({
+      topic,
+      chainId: SOLANA_WC_CHAIN,
+      request: {
+        method: "solana_signAndSendTransaction",
+        params: {
+          transaction,
+        },
+      },
+    }),
+    180000,
+    "The wallet did not respond in time. Nothing further was sent.",
+  );
+}
+
+async function requireSolanaSession(chatId, userAddress) {
+  if (!isSolanaAddress(userAddress)) {
+    throw new Error("This wallet session does not include that Solana account. Run /connect again.");
+  }
+  const topic = sessionTopicByChat.get(String(chatId));
+  if (!topic) {
+    throw new Error("The WalletConnect session is not active. Run /connect again. Nothing was signed.");
+  }
+  const client = await getClient();
+  let session;
+  try {
+    session = client.session.get(topic);
+  } catch {
+    throw new Error("The WalletConnect session is not active. Run /connect again. Nothing was signed.");
+  }
+  const accounts = session?.namespaces?.solana?.accounts;
+  const wanted = `${SOLANA_WC_CHAIN}:${userAddress}`;
+  const known = Array.isArray(accounts) && accounts.some((account) => String(account) === wanted);
+  if (!known) {
+    throw new Error("This wallet session does not include that Solana account. Run /connect again.");
+  }
+  const methods = session?.namespaces?.solana?.methods || [];
+  if (!methods.includes("solana_signAndSendTransaction")) {
+    throw new Error("This wallet cannot send the Solana transaction, so nothing was signed.");
+  }
+  return topic;
+}
+
 export function isEvmAddress(value) {
   return /^0x[a-fA-F0-9]{40}$/.test(String(value || ""));
 }
@@ -154,10 +233,13 @@ export function sanitizeWallet(wallet) {
   }
   const address = typeof wallet.address === "string" ? wallet.address : "";
   const chainId = typeof wallet.chainId === "string" ? wallet.chainId : "";
-  if (!isEvmAddress(address) || !/^eip155:\d+$/.test(chainId)) {
-    return null;
+  if (isEvmAddress(address) && /^eip155:\d+$/.test(chainId)) {
+    return { address, chainId };
   }
-  return { address, chainId };
+  if (chainId === SOLANA_SENTINEL_CHAIN_ID && isSolanaAddress(address)) {
+    return { address, chainId };
+  }
+  return null;
 }
 
 export function looksLikeSecretMaterial(text) {
@@ -269,6 +351,11 @@ export async function beginPairing() {
           chains: OPTIONAL_CHAINS,
           methods: EVM_METHODS,
           events: EVM_EVENTS,
+        },
+        solana: {
+          chains: [SOLANA_WC_CHAIN],
+          methods: SOLANA_SIGN_METHODS,
+          events: [],
         },
       },
     }),
@@ -384,7 +471,7 @@ async function getClient() {
 }
 
 function isTokenRef(value) {
-  return /^0x[a-fA-F0-9]{40}$/.test(value) || /^[A-Za-z][A-Za-z0-9._-]{0,31}$/.test(value);
+  return /^0x[a-fA-F0-9]{40}$/.test(value) || /^[A-Za-z][A-Za-z0-9._-]{0,31}$/.test(value) || isSolanaAddress(value);
 }
 
 function parsePositiveDecimal(raw) {
