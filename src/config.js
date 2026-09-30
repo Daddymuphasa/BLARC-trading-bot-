@@ -8,7 +8,7 @@ export const token = process.env.TELEGRAM_BOT_TOKEN;
 export const botUsername = process.env.BLARC_BOT_USERNAME || "theBLARCbot";
 export const supportUrl = process.env.BLARC_SUPPORT_URL || "https://t.me/BLARCHub";
 export const updatesUrl = process.env.BLARC_UPDATES_URL || "https://t.me/BLARCUpdates";
-export const twitterUrl = String(process.env.BLARC_TWITTER_URL || "").trim();
+export const twitterUrl = String(process.env.BLARC_TWITTER_URL || "https://x.com/blARCthedawg").trim();
 export const adminIds = new Set(
   (process.env.BLARC_ADMIN_IDS || "")
     .split(",")
