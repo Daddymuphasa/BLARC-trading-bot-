@@ -5,7 +5,7 @@ pragma solidity 0.8.26;
 /// @notice One user-signed swap on Robinhood Chain (chain id 4663).
 ///         Takes 1% (100 bps) of the sell amount and swaps the other 99%
 ///         through the chain Uniswap SwapRouter02. Bought tokens go to the user.
-/// @dev Not deployed. No admin, no upgrade, no fee change, no arbitrary pull.
+/// @dev Deployed at 0x9FC7993E0250D54fE04317A99369Bdd3f0262D58. No admin, no upgrade, no fee change, no arbitrary pull.
 ///      Fee recipient is fixed to the BLARC Robinhood wallet
 ///      0x729241d4d22cb8bD54E9210D1FE1e16b74A2a784.
 ///      Deployer passes SwapRouter02 (verified 0xCaf681a66D020601342297493863E78C959E5cb2).

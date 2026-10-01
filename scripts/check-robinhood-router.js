@@ -76,10 +76,11 @@ assert.equal(source.includes("onlyOwner"), false);
 assert.equal(/function\s+setFee/.test(source), false);
 
 const notes = readFileSync(new URL("../contracts/robinhood/README.md", import.meta.url), "utf8");
-assert.equal(/not deployed/i.test(notes), true);
-assert.equal(notes.includes("There is no contract address"), true);
+assert.equal(notes.includes("0x9FC7993E0250D54fE04317A99369Bdd3f0262D58"), true);
+assert.equal(/not deployed/i.test(notes), false);
 assert.equal(notes.includes("BLARC_ROBINHOOD_ROUTER"), true);
 
+delete process.env.BLARC_ROBINHOOD_ROUTER;
 const refused = await executeSwap({
   chatId: "router-test",
   wallet: { address: "0x0000000000000000000000000000000000000001", chainId: "eip155:4663" },

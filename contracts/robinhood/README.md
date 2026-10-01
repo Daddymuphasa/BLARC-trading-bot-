@@ -2,7 +2,7 @@
 
 BLARC fee router for Robinhood Chain (chain id **4663**).
 
-**This contract is not deployed. There is no contract address.** Do not invent one. `BLARC_ROBINHOOD_ROUTER` stays empty until someone with a deployer key deploys it. This repository has no deployer key and the bot never signs.
+**This contract is deployed** at `0x9FC7993E0250D54fE04317A99369Bdd3f0262D58` on chain 4663. `.env.example` sets `BLARC_ROBINHOOD_ROUTER` to that address. The bot never signs.
 
 ## What it does
 
@@ -66,10 +66,8 @@ After the deploy transaction is confirmed, check the new address has code:
 cast code "$BLARC_ROBINHOOD_ROUTER" --rpc-url https://rpc.mainnet.chain.robinhood.com
 ```
 
-`cast code` must not print `0x`. Then set `BLARC_ROBINHOOD_ROUTER` in the bot `.env` to that deployed address and restart the **one** bot process (`node src/bot.js` / `npm start`). Do not start a second poller.
+`cast code` must not print `0x`. Set `BLARC_ROBINHOOD_ROUTER` in the bot `.env` to the deployed router `0x9FC7993E0250D54fE04317A99369Bdd3f0262D58`. Do not start a second poller.
 
-Until that variable is set to a contract with code, `/swap` on chain 4663 refuses with `Fee cannot be included, swap not sent.` It does not fall back to a direct 0x swap.
+## Deployed address
 
-## Not deployed
-
-No deploy was run from this workspace. There is no BLARC router address to put in `.env`. Leaving `BLARC_ROBINHOOD_ROUTER` empty is correct.
+The live router is `0x9FC7993E0250D54fE04317A99369Bdd3f0262D58`. If `BLARC_ROBINHOOD_ROUTER` is empty or that address has no code, `/swap` on chain 4663 refuses with `Fee cannot be included, swap not sent.` It does not fall back to a direct 0x swap.
