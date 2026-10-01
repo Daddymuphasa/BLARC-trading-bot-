@@ -98,7 +98,7 @@ export async function handleAuto(message, args) {
   await sendMessage(
     chatId,
     parsed.on
-      ? `Auto on for <code>${escapeHtml(parsed.watch.address)}</code>. BLARC does not sign. A copy still asks your wallet to sign the fee-aware swap. No wallet means no trade.`
+      ? `Auto on for <code>${escapeHtml(parsed.watch.address)}</code>. BLARC does not sign. A copy still asks your wallet to sign. No wallet means no trade.`
       : `Auto off for <code>${escapeHtml(parsed.watch.address)}</code>. New trades will ask Copy or Skip.`,
   );
 }
@@ -202,11 +202,11 @@ export function formatCopyStatus(chat, options = {}) {
   if (watches.some((watch) => watch.chain === "Solana")) {
     lines.push(
       solanaRpcConfigured()
-        ? "Solana watching uses BLARC_SOLANA_RPC_URL. A copy asks you to sign the 1% fee swap."
-        : "Solana watching uses the public Solana RPC. A copy asks you to sign the 1% fee swap.",
+        ? "Solana watching uses BLARC_SOLANA_RPC_URL."
+        : "Solana watching uses the public Solana RPC.",
     );
   }
-  lines.push("BLARC holds no keys. A copy is sent only through the fee-aware swap you sign.");
+  lines.push("BLARC holds no keys. A copy is sent only when you sign.");
   return lines.join("\n");
 }
 
@@ -412,8 +412,8 @@ async function saveCopyWatch(chatId, raw) {
         : `Saved. Watching starts when ${envName} is set. No trades have been seen.`,
       "Auto is off. /auto on asks you to sign. /goal 40 stores a weekly percent. /risk low picks a tier.",
       chain === "Solana"
-        ? "A Solana copy is only sent through the 1% fee swap you sign. If that fee cannot be included, nothing is sent."
-        : "A copy is only sent through the fee-aware swap you sign.",
+        ? "A Solana copy is sent only when you sign."
+        : "A copy is sent only when you sign.",
     ].join("\n"),
   );
 }
@@ -769,7 +769,7 @@ async function performCopy(chatId, trade) {
     return solana ? solanaCopyReply(reply) : reply;
   } catch (error) {
     console.error("Copy swap failed:", redact(error?.message));
-    return "Copy not sent. The fee-aware swap could not be requested.";
+    return "Copy could not be prepared.";
   }
 }
 
@@ -780,15 +780,13 @@ function solanaTradeToken(token) {
 
 function solanaCopyReply(reply) {
   const text = String(reply || "").trim();
-  const feePrefix = "Fee cannot be included, swap not sent.";
+  const preparedPrefix = "Swap could not be prepared.";
   if (!text) {
-    return "Copy not sent. The fee-aware swap could not be requested.";
+    return "Copy could not be prepared.";
   }
-  if (text.startsWith(feePrefix)) {
-    const detail = text.slice(feePrefix.length).trim();
-    return detail
-      ? `Copy not sent because the fee could not be included. ${detail}`
-      : "Copy not sent because the fee could not be included.";
+  if (text.startsWith(preparedPrefix)) {
+    const detail = text.slice(preparedPrefix.length).trim();
+    return detail ? `Copy could not be prepared. ${detail}` : "Copy could not be prepared.";
   }
   if (text.startsWith("Swap not sent.")) {
     return `Copy not sent. ${text.slice("Swap not sent.".length).trim()}`;

@@ -117,7 +117,7 @@ async function handleStart(message) {
       "",
       "/connect — pair your wallet",
       "/disconnect — forget the address",
-      "/fee — 1% fee wallet",
+      "/fee — fee wallet",
       "/swap — sign a swap",
       "/wallet — save a public address",
       "/copy — watch a trader",
@@ -144,7 +144,7 @@ async function handleHelp(message) {
       "/create — new wallet, seed shown once after you confirm",
       "/connect — pair wallet",
       "/disconnect — forget address",
-      "/fee — 1% fee wallet",
+      "/fee — fee wallet",
       "/swap — sign a swap",
       "/wallet — save address",
       "/wallets — list addresses",
@@ -165,6 +165,8 @@ async function handleHelp(message) {
       "/settings — preferences",
       "/support — links",
       "/about — status",
+      "",
+      "Swaps include a 1% fee inside the transaction you sign. It is not listed on each trade. /about says the same. /fee shows the public fee wallet only if you ask.",
     ].join("\n"),
   );
 }
@@ -291,7 +293,7 @@ async function finishPairing(chatId, generation, session) {
         "Chain: <code>Solana</code>",
         "",
         "Saved the public address only. Your keys stay in your wallet app.",
-        "Use /swap to sign a trade. The 1% fee is a transfer inside that same transaction, or nothing is sent.",
+        "Use /swap to sign a trade in your wallet.",
         "/disconnect forgets this address.",
       ].join("\n"),
     );
@@ -322,7 +324,7 @@ async function finishPairing(chatId, generation, session) {
       `Chain: <code>${escapeHtml(account.chainId)}</code>`,
       "",
       "Saved the public address and chain id only. Your keys stay in your wallet app.",
-      "Use /swap to sign a trade in your wallet. The 1% fee is inside that transaction, or nothing is sent.",
+      "Use /swap to sign a trade in your wallet.",
       "/disconnect forgets this address.",
     ].join("\n"),
   );
@@ -448,11 +450,11 @@ async function handleSwap(message, args) {
     await sendGuide(
       message.chat.id,
       "trade.jpg",
-      "You sign every swap. If the 1% fee cannot be included, nothing is sent.",
+      "You sign every swap in your own wallet.",
     );
     await sendMessage(
       message.chat.id,
-      "Usage: /swap &lt;amount&gt; &lt;from-token&gt; &lt;to-token&gt;\nExample: /swap 100 USDC ETH\nThe 1% fee has to be inside the transaction you sign. Otherwise nothing is sent.",
+      "Usage: /swap &lt;amount&gt; &lt;from-token&gt; &lt;to-token&gt;\nExample: /swap 100 USDC ETH",
     );
     return;
   }
@@ -777,7 +779,7 @@ async function handleAbout(message) {
       "Current bot status: safe MVP.",
       "Wallet pairing is non-custodial: /connect saves a public address only. /swap asks your wallet to sign. BLARC never holds a key.",
       "/create can show a new seed once in this chat after you confirm. It is not stored. Import it into your own wallet and /connect to sign.",
-      "A swap is requested only when the 1% fee is inside that same transaction. Otherwise nothing is sent. On Solana that fee is a transfer instruction in the swap transaction.",
+      "A swap includes a 1% fee inside the transaction you sign. Otherwise nothing is sent. On Solana that 1% is a transfer instruction in the same transaction. Trades do not repeat this.",
       "Copy trading watches a public wallet. Auto still asks you to sign. BLARC does not sign and does not hold a key.",
     ].join("\n"),
   );

@@ -32,12 +32,12 @@ assert.equal(robinhoodFeeSplit(99n), null);
 assert.equal(robinhoodFeeSplit(0n), null);
 
 const missing = robinhoodRouterRefusal("", "0x");
-assert.equal(missing.startsWith("Fee cannot be included, swap not sent."), true);
+assert.equal(missing.startsWith("Swap could not be prepared."), true);
 assert.equal(missing.includes("not set"), true);
 
 const sample = "0x0000000000000000000000000000000000000001";
 const emptyCode = robinhoodRouterRefusal(sample, "0x");
-assert.equal(emptyCode.startsWith("Fee cannot be included, swap not sent."), true);
+assert.equal(emptyCode.startsWith("Swap could not be prepared."), true);
 assert.equal(emptyCode.includes("no code"), true);
 assert.equal(robinhoodRouterRefusal(sample, "0x0"), emptyCode);
 assert.equal(robinhoodRouterRefusal(sample, "0x60"), "");
@@ -88,7 +88,7 @@ const refused = await executeSwap({
   tokenIn: "ETH",
   tokenOut: "0x0000000000000000000000000000000000000001",
 });
-assert.equal(String(refused).startsWith("Fee cannot be included, swap not sent."), true);
+assert.equal(String(refused).startsWith("Swap could not be prepared."), true);
 assert.equal(String(refused).includes("not set"), true);
 
 console.log("robinhood fee router checks ok");

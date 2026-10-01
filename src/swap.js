@@ -163,13 +163,13 @@ export function validateSwapQuote(quote, { sellToken, buyToken, sellAmount, feeA
 export async function executeSwap({ chatId, wallet, amount, tokenIn, tokenOut }) {
   const fee = feeWalletForChain(wallet.chainId);
   if (fee.error === "missing" || fee.error === "invalid") {
-    return refuse("The fee wallet is not set.");
+    return refuse("The swap setup is incomplete.");
   }
   if (fee.error === "unset") {
-    return refuse(`The ${feeLabel(fee.family)} fee wallet is not set.`);
+    return refuse(`The ${feeLabel(fee.family)} swap setup is incomplete.`);
   }
   if (fee.error || !fee.address) {
-    return refuse("This chain does not map to a fee wallet.");
+    return refuse("This chain is not set up for swaps.");
   }
   if (fee.family === "sol") {
     return executeSolanaSwap({ chatId, wallet, amount, tokenIn, tokenOut, fee });
@@ -178,7 +178,7 @@ export async function executeSwap({ chatId, wallet, amount, tokenIn, tokenOut })
     return executeRobinhoodSwap({ chatId, wallet, amount, tokenIn, tokenOut, fee });
   }
   if (!ZEROX_SWAP_CHAIN_IDS.has(fee.chainId)) {
-    return refuse("This chain has no verified in-swap fee quote, so no transaction was built.");
+    return refuse("This chain has no verified swap quote, so no transaction was built.");
   }
   if (!swapApiKey()) {
     return refuse("ZEROX_API_KEY is not set, so no swap transaction was built.");
@@ -210,7 +210,7 @@ export async function executeSwap({ chatId, wallet, amount, tokenIn, tokenOut })
     return text("Swap refused. That amount has more decimal places than the token. Nothing was sent.");
   }
   if (expectedFeeBaseUnits(sellAmount) <= 0n) {
-    return refuse("1% of this amount rounds to zero in token units.");
+    return refuse("This amount is too small to swap.");
   }
 
   let quote;
@@ -237,7 +237,7 @@ export async function executeSwap({ chatId, wallet, amount, tokenIn, tokenOut })
   });
   if (!verdict.ok) {
     console.error("swap quote rejected:", verdict.reason);
-    return refuse("The quote did not put the 1% fee inside the swap transaction.");
+    return refuse("The quote could not be used, so no transaction was built.");
   }
 
   const allowance = quote.issues?.allowance;
@@ -270,7 +270,7 @@ export async function executeSwap({ chatId, wallet, amount, tokenIn, tokenOut })
 }
 
 function refuse(detail) {
-  return text(`Fee cannot be included, swap not sent. ${detail}`);
+  return text(`Swap could not be prepared. ${detail}`);
 }
 
 function text(value) {
@@ -433,7 +433,7 @@ async function requestApproval({ chatId, wallet, sell, allowance, allowanceTarge
     [
       "The swap was not sent.",
       `Sign the approval in your wallet so <code>${escapeHtml(spender)}</code> can spend <b>${escapeHtml(formatUnits(sellAmount, sell.decimals))} ${escapeHtml(sell.label)}</b>.`,
-      "That approval is not the swap and does not pay the fee. After it confirms, run /swap again. The swap is sent only when the 1% fee is inside that transaction.",
+      "That approval is not the swap. After it confirms, run /swap again.",
     ].join("\n"),
   );
 }
@@ -466,7 +466,6 @@ function encodeApprove(spender, amount) {
 function signedSwapMessage({ wallet, sell, buy, amount, fee, quote, hash }) {
   const buyAmount = formatQuoted(quote.buyAmount, buy.decimals);
   const minBuy = formatQuoted(quote.minBuyAmount, buy.decimals);
-  const feeAmount = formatUnits(expectedFeeBaseUnits(BigInt(quote.sellAmount)), sell.decimals);
   const lines = [
     "<b>BLARC swap</b>",
     "Your wallet was asked to sign one swap. BLARC did not sign and does not hold a key.",
@@ -475,10 +474,7 @@ function signedSwapMessage({ wallet, sell, buy, amount, fee, quote, hash }) {
     `Chain: <code>${escapeHtml(wallet.chainId)}</code>`,
     `Sell: <b>${escapeHtml(amount)} ${escapeHtml(sell.label)}</b>`,
     `Buy: <b>${escapeHtml(buy.label)}</b>${buyAmount ? ` (about ${escapeHtml(buyAmount)})` : ""}`,
-    minBuy ? `Minimum bought, after 1% slippage: <b>${escapeHtml(minBuy)}</b>` : "",
-    `Fee: <b>1%</b> = <b>${escapeHtml(feeAmount)} ${escapeHtml(sell.label)}</b>`,
-    `Fee wallet: <code>${escapeHtml(fee.address)}</code>`,
-    "That fee is inside the swap transaction you were asked to sign.",
+    minBuy ? `Minimum bought: <b>${escapeHtml(minBuy)}</b>` : "",
   ];
   const txHash = String(hash || "");
   if (/^0x[a-fA-F0-9]{64}$/.test(txHash)) {
@@ -604,10 +600,10 @@ export function chooseV3Tier(quotes) {
 
 export function robinhoodRouterRefusal(routerAddress, bytecode) {
   if (!isEvmAddress(String(routerAddress || "").trim())) {
-    return "Fee cannot be included, swap not sent. The Robinhood fee router is not set.";
+    return "Swap could not be prepared. The Robinhood router is not set.";
   }
   if (!bytecodePresent(bytecode)) {
-    return "Fee cannot be included, swap not sent. The Robinhood fee router has no code.";
+    return "Swap could not be prepared. The Robinhood router has no code.";
   }
   return "";
 }
@@ -618,7 +614,7 @@ export function encodeRobinhoodSwapCall({ tokenIn, tokenOut, poolFee, amountIn, 
 
 async function executeRobinhoodSwap({ chatId, wallet, amount, tokenIn, tokenOut, fee }) {
   if (String(fee.address || "").toLowerCase() !== ROBINHOOD_FEE_RECIPIENT.toLowerCase()) {
-    return refuse("The Robinhood fee wallet does not match the router recipient.");
+    return refuse("The Robinhood swap setup does not match.");
   }
 
   const router = String(process.env.BLARC_ROBINHOOD_ROUTER || "").trim();
@@ -628,7 +624,7 @@ async function executeRobinhoodSwap({ chatId, wallet, amount, tokenIn, tokenOut,
       routerCode = await ethRpc(ROBINHOOD_CHAIN_ID, "eth_getCode", [router, "latest"]);
     } catch (error) {
       console.error("robinhood router code failed:", error?.code || "rpc");
-      return refuse("The Robinhood fee router could not be read.");
+      return refuse("The Robinhood router could not be read.");
     }
   }
   const routerRefusal = robinhoodRouterRefusal(router, routerCode);
@@ -668,7 +664,7 @@ async function executeRobinhoodSwap({ chatId, wallet, amount, tokenIn, tokenOut,
   }
   const split = robinhoodFeeSplit(sellAmount);
   if (!split) {
-    return refuse("1% of this amount rounds to zero in token units.");
+    return refuse("This amount is too small to swap.");
   }
 
   let best;
@@ -686,7 +682,7 @@ async function executeRobinhoodSwap({ chatId, wallet, amount, tokenIn, tokenOut,
   }
   const amountOutMinimum = minimumOut(best.amountOut);
   if (amountOutMinimum <= 0n) {
-    return refuse("The quoted output is too small after 1% slippage.");
+    return refuse("The quoted output is too small.");
   }
 
   const native = sell.address.toLowerCase() === NATIVE;
@@ -853,21 +849,16 @@ async function ethRpc(chainId, method, params) {
 function robinhoodSignedMessage({ wallet, sell, buy, amount, fee, sellAmount, quotedOut, amountOutMinimum, router, poolFee, hash }) {
   const buyAmount = formatUnits(quotedOut, buy.decimals);
   const minBuy = formatUnits(amountOutMinimum, buy.decimals);
-  const feeAmount = formatUnits(robinhoodFeeSplit(sellAmount).fee, sell.decimals);
   const lines = [
     "<b>BLARC swap</b>",
-    "Your wallet was asked to sign one Robinhood swap through the BLARC fee router. BLARC did not sign and does not hold a key.",
+    "Your wallet was asked to sign one Robinhood swap. BLARC did not sign and does not hold a key.",
     "",
     `Wallet: <code>${escapeHtml(wallet.address)}</code>`,
     `Chain: <code>${escapeHtml(wallet.chainId)}</code>`,
     `Router: <code>${escapeHtml(router)}</code>`,
     `Sell: <b>${escapeHtml(amount)} ${escapeHtml(sell.label)}</b>`,
     `Buy: <b>${escapeHtml(buy.label)}</b> (about ${escapeHtml(buyAmount)})`,
-    `Minimum bought, after 1% slippage: <b>${escapeHtml(minBuy)}</b>`,
-    `Pool fee tier: <code>${escapeHtml(poolFee)}</code>`,
-    `Fee: <b>1%</b> = <b>${escapeHtml(feeAmount)} ${escapeHtml(sell.label)}</b>`,
-    `Fee wallet: <code>${escapeHtml(fee.address)}</code>`,
-    "That fee is inside the router transaction you were asked to sign. There is no fee-less path.",
+    `Minimum bought: <b>${escapeHtml(minBuy)}</b>`,
   ];
   const txHash = String(hash || "");
   if (/^0x[a-fA-F0-9]{64}$/.test(txHash)) {

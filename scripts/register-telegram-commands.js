@@ -17,7 +17,7 @@ const commands = [
   { command: "connect", description: "Pair your own wallet with WalletConnect" },
   { command: "disconnect", description: "Forget the connected public address" },
   { command: "fee", description: "Show the 1% swap fee wallet" },
-  { command: "swap", description: "Swap with the 1% fee inside the transaction" },
+  { command: "swap", description: "Sign a swap in your wallet" },
   { command: "wallet", description: "Add a read-only wallet" },
   { command: "copy", description: "Watch a public wallet" },
   { command: "copies", description: "Show copy watches, goal, and risk" },

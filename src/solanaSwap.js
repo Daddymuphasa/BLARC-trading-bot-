@@ -12,9 +12,9 @@ import { FEE_BPS, isSolanaAddress, solanaSignBlocker, requestSolanaTransaction }
 
 export const SOLANA_FEE_WALLET = "X4WBhCgYQFoeugPcevRxgAq7ZWuyu13w646Wh4WY5wL";
 export const SOLANA_FEE_NOT_ADDED =
-  "Fee cannot be included, swap not sent. The 1% fee transfer could not be added to the Solana transaction, so nothing was signed.";
+  "Swap could not be prepared. The Solana transaction could not be completed, so nothing was signed.";
 export const SOLANA_FEE_ZERO =
-  "Fee cannot be included, swap not sent. 1% of this amount rounds to zero in token units.";
+  "Swap could not be prepared. This amount is too small to swap.";
 
 const WSOL_MINT = "So11111111111111111111111111111111111111112";
 const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
@@ -68,10 +68,10 @@ export function buildFeeInstructions({ kind, user, mint, tokenProgram, decimals,
     return { ok: false, userMessage: SOLANA_FEE_ZERO };
   }
   if (fee >= amount) {
-    return { ok: false, userMessage: refuse("The 1% fee leaves nothing to swap, so no transaction was built.") };
+    return { ok: false, userMessage: refuse("This amount leaves nothing to swap, so no transaction was built.") };
   }
   if (fee > U64_MAX || amount - fee > U64_MAX) {
-    return { ok: false, userMessage: refuse("The fee amount does not fit in a Solana transfer, so nothing was signed.") };
+    return { ok: false, userMessage: refuse("The amount does not fit in a Solana transfer, so nothing was signed.") };
   }
   let userKey;
   let feeKey;
@@ -82,7 +82,7 @@ export function buildFeeInstructions({ kind, user, mint, tokenProgram, decimals,
     return { ok: false, userMessage: refuse("The connected account is not a Solana address, so no transaction was built.") };
   }
   if (!feeKey.equals(new PublicKey(SOLANA_FEE_WALLET)) || userKey.equals(feeKey)) {
-    return { ok: false, userMessage: refuse("The Solana fee wallet is not the required public address, so nothing was signed.") };
+    return { ok: false, userMessage: refuse("The Solana swap setup is not ready, so nothing was signed.") };
   }
   if (kind === "sol") {
     const transfer = SystemProgram.transfer({
@@ -109,10 +109,10 @@ export function buildFeeInstructions({ kind, user, mint, tokenProgram, decimals,
     mintKey = new PublicKey(mint);
     programKey = new PublicKey(tokenProgram);
   } catch {
-    return { ok: false, userMessage: refuse("The fee token account could not be built, so nothing was signed.") };
+    return { ok: false, userMessage: refuse("The token account could not be built, so nothing was signed.") };
   }
   if (!TOKEN_PROGRAMS.has(programKey.toBase58())) {
-    return { ok: false, userMessage: refuse("The fee token program is not supported, so nothing was signed.") };
+    return { ok: false, userMessage: refuse("The token program is not supported, so nothing was signed.") };
   }
   const decimalsNumber = Number(decimals);
   if (!Number.isInteger(decimalsNumber) || decimalsNumber < 0 || decimalsNumber > 9) {
@@ -235,7 +235,7 @@ export function attachFeeInstructions(serializedBase64, plan, addressLookupTable
 
 export async function executeSolanaSwap({ chatId, wallet, amount, tokenIn, tokenOut, fee }) {
   if (String(fee?.address || "") !== SOLANA_FEE_WALLET) {
-    return refuse("The Solana fee wallet is not the required public address, so nothing was signed.");
+    return refuse("The Solana swap setup is not ready, so nothing was signed.");
   }
   const user = String(wallet?.address || "");
   if (!isSolanaAddress(user) || !isPublicKey(user)) {
@@ -254,7 +254,7 @@ export async function executeSolanaSwap({ chatId, wallet, amount, tokenIn, token
   } catch (error) {
     console.error("solana token read failed:", error?.code || "read");
     if (error?.code === "no-rpc") {
-      return refuse("The Solana RPC is not set, so the fee account could not be built.");
+      return refuse("The Solana RPC is not set, so the swap could not be built.");
     }
     return refuse("The token amount could not be read, so no transaction was built.");
   }
@@ -298,7 +298,7 @@ export async function executeSolanaSwap({ chatId, wallet, amount, tokenIn, token
   const quoteCheck = validateJupiterQuote(quote, { inputMint: sell.mint, outputMint: buy.mint, swapAmount: plan.swapAmount });
   if (!quoteCheck.ok) {
     console.error("solana quote rejected:", quoteCheck.reason);
-    return refuse("The quote did not match the sell amount after the 1% fee, so nothing was signed.");
+    return refuse("The quote did not match the sell amount, so nothing was signed.");
   }
 
   let swapTransaction;
@@ -316,9 +316,9 @@ export async function executeSolanaSwap({ chatId, wallet, amount, tokenIn, token
     } catch (error) {
       console.error("solana lookup tables failed:", error?.code || "alt");
       if (error?.code === "no-rpc") {
-        return refuse("The Solana RPC is not set, so the 1% fee could not be added to the versioned swap. Nothing was signed.");
+        return refuse("The Solana RPC is not set, so the versioned swap could not be prepared. Nothing was signed.");
       }
-      return refuse("The Solana address lookup tables could not be read, so the 1% fee could not be added. Nothing was signed.");
+      return refuse("The Solana address lookup tables could not be read, so the swap could not be prepared. Nothing was signed.");
     }
   }
 
@@ -360,7 +360,7 @@ function attachLegacy(bytes, plan) {
     return { ok: false, userMessage: SOLANA_FEE_NOT_ADDED };
   }
   if (!tx.feePayer.equals(new PublicKey(plan.user))) {
-    return { ok: false, userMessage: refuse("The swap transaction fee payer is not the connected wallet, so nothing was signed.") };
+    return { ok: false, userMessage: refuse("The swap transaction payer is not the connected wallet, so nothing was signed.") };
   }
   const original = tx.instructions.map((ix) => ix.programId.toBase58());
   const index = insertIndex(tx.instructions);
@@ -402,7 +402,7 @@ function attachVersioned(bytes, plan, addressLookupTableAccounts) {
     return { ok: false, userMessage: SOLANA_FEE_NOT_ADDED };
   }
   if (!decompiled.payerKey.equals(new PublicKey(plan.user)) || decompiled.instructions.length === 0) {
-    return { ok: false, userMessage: refuse("The swap transaction fee payer is not the connected wallet, so nothing was signed.") };
+    return { ok: false, userMessage: refuse("The swap transaction payer is not the connected wallet, so nothing was signed.") };
   }
   const originalCount = decompiled.instructions.length;
   const index = insertIndex(decompiled.instructions);
@@ -692,8 +692,7 @@ async function fetchJupiterSwap({ quote, user }) {
   return body.swapTransaction;
 }
 
-function signedSolanaMessage({ wallet, sell, buy, amount, fee, plan, quote, signature }) {
-  const feeAmount = formatUnits(plan.fee, sell.decimals);
+function signedSolanaMessage({ wallet, sell, buy, amount, quote, signature }) {
   const buyAmount = formatQuoted(quote.outAmount, buy.decimals);
   const lines = [
     "<b>BLARC swap</b>",
@@ -703,11 +702,6 @@ function signedSolanaMessage({ wallet, sell, buy, amount, fee, plan, quote, sign
     "Chain: <code>Solana</code>",
     `Sell: <b>${escapeHtml(amount)} ${escapeHtml(sell.label || (sell.native ? "SOL" : sell.mint))}</b>`,
     `Buy: <b>${escapeHtml(buy.label || (buy.native ? "SOL" : buy.mint))}</b>${buyAmount ? ` (about ${escapeHtml(buyAmount)})` : ""}`,
-    `Fee: <b>1%</b> = <b>${escapeHtml(feeAmount)} ${escapeHtml(sell.label || (sell.native ? "SOL" : "token"))}</b>`,
-    `Fee wallet: <code>${escapeHtml(fee.address)}</code>`,
-    plan.kind === "sol"
-      ? "That 1% is a SOL transfer inside the swap transaction you were asked to sign. There is no fee-less path."
-      : "That 1% is a token transfer inside the swap transaction you were asked to sign. There is no fee-less path.",
   ];
   if (/^[1-9A-HJ-NP-Za-km-z]{64,100}$/.test(signature)) {
     lines.push(`Transaction: <code>${escapeHtml(signature)}</code>`);
@@ -777,7 +771,7 @@ function isPublicKey(value) {
 }
 
 function refuse(detail) {
-  return `Fee cannot be included, swap not sent. ${detail}`;
+  return `Swap could not be prepared. ${detail}`;
 }
 
 function escapeHtml(value) {
