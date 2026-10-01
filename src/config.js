@@ -25,6 +25,7 @@ export const copyPollIntervalMs = 15_000;
 export const maxCopyWatches = 10;
 
 const ROBINHOOD_PUBLIC_RPC = "https://rpc.mainnet.chain.robinhood.com";
+const SOLANA_PUBLIC_RPC = "https://api.mainnet-beta.solana.com";
 
 export function evmRpcConfigured() {
   return Boolean(String(process.env.BLARC_EVM_RPC_URL || "").trim());
@@ -34,7 +35,11 @@ export function evmRpcUrl() {
   return String(process.env.BLARC_EVM_RPC_URL || "").trim() || ROBINHOOD_PUBLIC_RPC;
 }
 
+export function solanaRpcConfigured() {
+  return Boolean(String(process.env.BLARC_SOLANA_RPC_URL || "").trim());
+}
+
 export function solanaRpcUrl() {
-  return String(process.env.BLARC_SOLANA_RPC_URL || "").trim();
+  return String(process.env.BLARC_SOLANA_RPC_URL || "").trim() || SOLANA_PUBLIC_RPC;
 }
 

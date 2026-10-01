@@ -25,7 +25,7 @@ BLARC is an Arc-native Telegram DeFi trading bot project with a responsive produ
 - `/fee` shows the 1% (100 bps) fee and which public wallet applies to the connected chain.
 - `/swap <amount> <from> <to>` asks the user's wallet to sign one swap. The 1% is inside that transaction, paid to the chain's fee wallet. If the fee cannot be included, nothing is signed. On Solana the 1% is a transfer to the Solana fee wallet inside that same transaction. If the transfer cannot be added, nothing is signed. On Robinhood (chain 4663) the signed call is the BLARC fee router `0x9FC7993E0250D54fE04317A99369Bdd3f0262D58`, not a direct 0x swap. `/swap` uses `BLARC_ROBINHOOD_ROUTER` and refuses if that contract has no code.
 - `/wallet <address>` add a read-only public wallet.
-- `/copy <address>` watch a public Solana or EVM wallet. Seeds and private keys are rejected. A real trade gets Copy and Skip buttons.
+- `/copy <address>` watch a public Solana or EVM wallet. Seeds and private keys are rejected. A real trade gets Copy and Skip buttons. A Solana copy asks your wallet to sign the same 1% fee swap. If that fee cannot be included, nothing is sent.
 - `/copies`, `/uncopy`, `/auto on|off`, `/goal <percent>`, `/risk low|average|high|daredevil`.
 - Auto does not sign. It asks the user to sign the same fee-aware swap. No connected wallet means no trade.
 - A weekly goal is stored as a percent. Profit tracking is not live, and no balance is invented.
@@ -61,7 +61,7 @@ Security-minded implementation choices:
 - Wallet features store public addresses only. BLARC does not store private keys, seed phrases, or signing permissions.
 - WalletConnect relay keys stay in process memory. They are not written to `data/blarc-state.json`. `/create` holds a new seed in memory only until the one-time reveal, then drops it. The state file keeps the public addresses only.
 - The 1% fee is not custody. It is part of the swap transaction the user signs, or the swap is refused.
-- Copy trading stores public watch addresses only. Mirrored swaps go through the fee-aware swap builder. If that builder refuses, nothing is signed. When `BLARC_EVM_RPC_URL` is empty, Robinhood copy watching uses the public RPC `https://rpc.mainnet.chain.robinhood.com` (chain 4663) and does not report a trade if that call fails. A missing `BLARC_SOLANA_RPC_URL` saves the watch and does not pretend a Solana trade was seen.
+- Copy trading stores public watch addresses only. Mirrored swaps go through the fee-aware swap builder. If that builder refuses, nothing is signed. When `BLARC_EVM_RPC_URL` is empty, Robinhood copy watching uses the public RPC `https://rpc.mainnet.chain.robinhood.com` (chain 4663) and does not report a trade if that call fails. When `BLARC_SOLANA_RPC_URL` is empty, Solana copy watching uses the public RPC `https://api.mainnet-beta.solana.com`. A Solana mirror is that same user-signed swap with the 1% fee inside it. If the fee cannot be included, nothing is sent and there is no fee-less fallback.
 
 For any future trading backend, add threat modeling before implementation. At minimum, define key custody boundaries, wallet encryption, confirmation flows, rate limiting, anti-phishing protections, logging redaction, abuse monitoring, and incident-response procedures.
 
@@ -81,7 +81,7 @@ Requires Node.js 20 or newer. The bot is plain Node ESM and starts with `node sr
 
 1. Clone this repository and enter its directory.
 2. Create a bot with BotFather and copy the token.
-3. Copy `.env.example` to `.env` and fill it in. `.env` is gitignored. Set `TELEGRAM_BOT_TOKEN`. For pairing, set `WALLETCONNECT_PROJECT_ID` from Reown (WalletConnect) Cloud. Set `ZEROX_API_KEY` or `/swap` and copy trades refuse and send nothing. Leave `BLARC_EVM_RPC_URL` empty to watch Robinhood copies on the public RPC. Set `BLARC_SOLANA_RPC_URL` or a Solana watch stays saved without reading trades. Fee fields are public addresses that receive the 1% inside a swap (`BLARC_FEE_ADDRESS` for EVM and for Celo chain 42220, `BLARC_FEE_ADDRESS_SOL` for Solana, `BLARC_FEE_ADDRESS_ROBINHOOD` for Robinhood chain 4663, `BLARC_FEE_ADDRESS_ARC` for Arc chain 5042). Robinhood swaps also need `BLARC_ROBINHOOD_ROUTER` set to the deployed fee router `0x9FC7993E0250D54fE04317A99369Bdd3f0262D58`. Do not put private keys, seed phrases, or real tokens into git. Empty `BLARC_BOT_USERNAME`, `BLARC_SUPPORT_URL`, and `BLARC_UPDATES_URL` fall back to the built-in public defaults.
+3. Copy `.env.example` to `.env` and fill it in. `.env` is gitignored. Set `TELEGRAM_BOT_TOKEN`. For pairing, set `WALLETCONNECT_PROJECT_ID` from Reown (WalletConnect) Cloud. Set `ZEROX_API_KEY` or `/swap` and copy trades refuse and send nothing. Leave `BLARC_EVM_RPC_URL` empty to watch Robinhood copies on the public RPC. Leave `BLARC_SOLANA_RPC_URL` empty to watch Solana copies on `https://api.mainnet-beta.solana.com`. Fee fields are public addresses that receive the 1% inside a swap (`BLARC_FEE_ADDRESS` for EVM and for Celo chain 42220, `BLARC_FEE_ADDRESS_SOL` for Solana, `BLARC_FEE_ADDRESS_ROBINHOOD` for Robinhood chain 4663, `BLARC_FEE_ADDRESS_ARC` for Arc chain 5042). Robinhood swaps also need `BLARC_ROBINHOOD_ROUTER` set to the deployed fee router `0x9FC7993E0250D54fE04317A99369Bdd3f0262D58`. Do not put private keys, seed phrases, or real tokens into git. Empty `BLARC_BOT_USERNAME`, `BLARC_SUPPORT_URL`, and `BLARC_UPDATES_URL` fall back to the built-in public defaults.
 4. Install and start:
 
 ```bash
@@ -125,7 +125,7 @@ The wallet packages are `@walletconnect/sign-client` and `qrcode`. EVM swaps are
 - `src/createCommand.js` - `/create` warning, confirmation button, one-time seed send, then public-address save.
 - `src/wallet.js` - WalletConnect pairing, public-address session, and user-signed `eth_sendTransaction` requests.
 - `src/swap.js` - 0x swap quote with the 1% fee inside the transaction, or a refusal. Chain 4663 calls the Robinhood fee router instead.
-- `src/copy.js` - public-wallet copy watches. Execution only calls the fee-aware swap.
+- `src/copy.js` - public-wallet copy watches. Solana mirrors call the same 1% fee swap. Execution only calls the fee-aware swap.
 - `src/dexscreener.js` - read-only DexScreener market data adapter.
 - `src/cards.js` - one JPEG card per chain and token contract, built with sharp from the DexScreener pair and the local BLARC mascot.
 - `src/env.js` - loads `.env` from the working directory without overriding existing variables.

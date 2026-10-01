@@ -1,11 +1,11 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { classifyAddress } from "./dexscreener.js";
-import { copyPollIntervalMs, evmRpcConfigured, evmRpcUrl, maxCopyWatches, solanaRpcUrl } from "./config.js";
+import { copyPollIntervalMs, evmRpcConfigured, evmRpcUrl, maxCopyWatches, solanaRpcConfigured, solanaRpcUrl } from "./config.js";
 import { ensureChatState, mutateState, readState } from "./state.js";
 import { savedCardForTrade } from "./cards.js";
 import { escapeHtml, sendGuide, sendMessage, sendPhotoFile, sleep, telegram } from "./telegram.js";
 import { executeSwap } from "./swap.js";
-import { ROBINHOOD_CHAIN_ID, chainIdNumber, isEvmAddress, looksLikeSecretMaterial, sanitizeWallet } from "./wallet.js";
+import { ROBINHOOD_CHAIN_ID, SOLANA_SENTINEL_CHAIN_ID, chainIdNumber, isEvmAddress, isSolanaAddress, looksLikeSecretMaterial, sanitizeWallet } from "./wallet.js";
 
 const NATIVE = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
@@ -201,9 +201,9 @@ export function formatCopyStatus(chat, options = {}) {
   }
   if (watches.some((watch) => watch.chain === "Solana")) {
     lines.push(
-      solanaRpcUrl()
-        ? "Solana watching uses BLARC_SOLANA_RPC_URL. Copies on Solana are refused."
-        : "Solana watching starts when BLARC_SOLANA_RPC_URL is set. No trades have been seen.",
+      solanaRpcConfigured()
+        ? "Solana watching uses BLARC_SOLANA_RPC_URL. A copy asks you to sign the 1% fee swap."
+        : "Solana watching uses the public Solana RPC. A copy asks you to sign the 1% fee swap.",
     );
   }
   lines.push("BLARC holds no keys. A copy is sent only through the fee-aware swap you sign.");
@@ -411,7 +411,9 @@ async function saveCopyWatch(chatId, raw) {
         ? "Watching starts from the next new trade. Older trades are not reported."
         : `Saved. Watching starts when ${envName} is set. No trades have been seen.`,
       "Auto is off. /auto on asks you to sign. /goal 40 stores a weekly percent. /risk low picks a tier.",
-      chain === "Solana" ? "Solana copies are not sent. The fee-aware swap refuses Solana." : "A copy is only sent through the fee-aware swap you sign.",
+      chain === "Solana"
+        ? "A Solana copy is only sent through the 1% fee swap you sign. If that fee cannot be included, nothing is sent."
+        : "A copy is only sent through the fee-aware swap you sign.",
     ].join("\n"),
   );
 }
@@ -729,10 +731,12 @@ async function sendTradeNotice(chatId, trade, text, options) {
 }
 
 async function performCopy(chatId, trade) {
-  if (trade.chain === "Solana") {
-    return "Copy not sent. Solana swaps are refused because the 1% fee cannot be included in that transaction.";
-  }
-  if (!trade.amount || !isEvmAddress(trade.tokenIn) || !isEvmAddress(trade.tokenOut)) {
+  const solana = trade.chain === "Solana";
+  if (solana) {
+    if (!trade.amount || !solanaTradeToken(trade.tokenIn) || !solanaTradeToken(trade.tokenOut)) {
+      return "Copy not sent. The sell amount or tokens could not be read from the trade.";
+    }
+  } else if (!trade.amount || !isEvmAddress(trade.tokenIn) || !isEvmAddress(trade.tokenOut)) {
     return "Copy not sent. The sell amount or tokens could not be read from the trade.";
   }
   const state = await readState();
@@ -742,7 +746,11 @@ async function performCopy(chatId, trade) {
     return "No wallet is connected, so this copy was not sent.";
   }
   const userChain = chainIdNumber(wallet.chainId);
-  if (userChain == null || userChain !== trade.chainId) {
+  if (solana) {
+    if (wallet.chainId !== SOLANA_SENTINEL_CHAIN_ID) {
+      return `Copy not sent. This trade is on Solana and your wallet is on chain ${userChain == null ? "unknown" : userChain}.`;
+    }
+  } else if (userChain == null || userChain !== trade.chainId) {
     return `Copy not sent. This trade is on chain ${trade.chainId} and your wallet is on chain ${userChain == null ? "unknown" : userChain}.`;
   }
   const userTier = normalizeTier(chat?.riskTier);
@@ -751,17 +759,44 @@ async function performCopy(chatId, trade) {
     return oneLine(skipTierText(trade, tradeTier, userTier, chat.riskMax));
   }
   try {
-    return await executeSwap({
+    const reply = await executeSwap({
       chatId,
       wallet,
       amount: trade.amount,
       tokenIn: trade.tokenIn,
       tokenOut: trade.tokenOut,
     });
+    return solana ? solanaCopyReply(reply) : reply;
   } catch (error) {
     console.error("Copy swap failed:", redact(error?.message));
     return "Copy not sent. The fee-aware swap could not be requested.";
   }
+}
+
+function solanaTradeToken(token) {
+  const value = String(token || "");
+  return value === "SOL" || isSolanaAddress(value);
+}
+
+function solanaCopyReply(reply) {
+  const text = String(reply || "").trim();
+  const feePrefix = "Fee cannot be included, swap not sent.";
+  if (!text) {
+    return "Copy not sent. The fee-aware swap could not be requested.";
+  }
+  if (text.startsWith(feePrefix)) {
+    const detail = text.slice(feePrefix.length).trim();
+    return detail
+      ? `Copy not sent because the fee could not be included. ${detail}`
+      : "Copy not sent because the fee could not be included.";
+  }
+  if (text.startsWith("Swap not sent.")) {
+    return `Copy not sent. ${text.slice("Swap not sent.".length).trim()}`;
+  }
+  if (text.startsWith("Swap refused.")) {
+    return `Copy not sent. ${text.slice("Swap refused.".length).trim()}`;
+  }
+  return text;
 }
 
 function formatTradeText(trade, tradeTier, max) {
