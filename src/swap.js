@@ -86,6 +86,16 @@ const KNOWN = {
 
 const decimalsCache = new Map();
 
+export function knownTokenSymbols(chainId) {
+  const id = Number(chainId);
+  const table = KNOWN[id];
+  if (table) {
+    return Object.keys(table);
+  }
+  return ["ETH", "USDC", "USDT", "WETH"];
+}
+
+
 export function swapApiKey() {
   return String(process.env.ZEROX_API_KEY || "").trim();
 }

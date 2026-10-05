@@ -18,11 +18,12 @@ import { buildMarketRiskLines, classifyAddress, findBestPair, formatPairSummary 
 import { adminIds, maxPriceWatches, supportUrl, twitterUrl, updatesUrl } from "./config.js";
 import { ensureChatState, mutateState, readState, upsertChat } from "./state.js";
 import { formatCreatedWallet, handleCreate, handleCreateCallback } from "./createCommand.js";
-import { escapeHtml, sendGuide, sendMessage, sendPhoto, sendPlain, sleep } from "./telegram.js";
+import { answerCallbackQuery, escapeHtml, sendGuide, sendMessage, sendPhoto, sendPlain, sleep } from "./telegram.js";
 import { handleAlerts, handleUnwatch, handleWatch, handleWatchlist } from "./alerts.js";
 import { ensurePairCard } from "./cards.js";
 import { executeSwap, swapApiKey } from "./swap.js";
 import { formatCopyStatus, handleAuto, handleCopy, handleCopyCallback, handleCopies, handleGoal, handleRisk, handleUncopy } from "./copy.js";
+import { clearUiPrompt, handleUiCallback, handleUiText, openFeatureFromCommand, showHome } from "./ui.js";
 import process from "node:process";
 
 const pairingGeneration = new Map();
@@ -61,7 +62,13 @@ export async function handleUpdate(update) {
     if (await handleCreateCallback(update.callback_query)) {
       return;
     }
-    await handleCopyCallback(update.callback_query);
+    if (await handleCopyCallback(update.callback_query)) {
+      return;
+    }
+    if (await handleUiCallback(update.callback_query)) {
+      return;
+    }
+    await answerCallbackQuery(update.callback_query.id, "That button expired.");
     return;
   }
 
@@ -71,24 +78,35 @@ export async function handleUpdate(update) {
   }
 
   if (looksLikeSecretMaterial(message.text)) {
+    clearUiPrompt(message.chat.id);
     await sendMessage(message.chat.id, "That looks like a seed phrase or private key. BLARC does not accept it. Nothing was saved.");
     return;
   }
 
   const parsed = parseCommand(message.text);
   if (!parsed) {
+    if (await handleUiText(message)) {
+      return;
+    }
     const trimmed = message.text.trim();
     if (!/\s/.test(trimmed) && classifyAddress(trimmed).valid) {
       await handleCopy(message, [trimmed]);
       return;
     }
-    await sendMessage(message.chat.id, "Send /help to see what BLARC can do right now.");
+    await showHome(message.chat.id, { name: message.from?.first_name, edit: false });
+    return;
+  }
+
+  clearUiPrompt(message.chat.id);
+
+  if (await openFeatureFromCommand(parsed.name, message, parsed.args)) {
     return;
   }
 
   const handler = commands[parsed.name];
   if (!handler) {
-    await sendMessage(message.chat.id, `Unknown command: /${parsed.name}\n\nSend /help for available commands.`);
+    await sendMessage(message.chat.id, `Unknown command: /${parsed.name}\n\nTap a button below or send /help.`);
+    await showHome(message.chat.id, { name: message.from?.first_name, edit: false });
     return;
   }
 
@@ -106,72 +124,14 @@ function parseCommand(text) {
 }
 
 async function handleStart(message) {
-  const name = escapeHtml(message.from?.first_name || "trader");
-  await upsertChat(message.chat.id, { alerts: true });
-  await sendGuide(message.chat.id, "welcome.jpg", "Welcome. Paste a wallet, set an alert, or connect to trade.");
-  await sendMessage(
-    message.chat.id,
-    [
-      `Welcome to <b>BLARC</b>, ${name}.`,
-      "Paste a wallet to copy a trader. Set a price alert. Connect your wallet to trade.",
-      "",
-      "/connect — pair your wallet",
-      "/disconnect — forget the address",
-      "/fee — fee wallet",
-      "/swap — sign a swap",
-      "/wallet — save a public address",
-      "/copy — watch a trader",
-      "/wallets — saved addresses",
-      "/scan — token check",
-      "/watch — price alert",
-      "/watchlist — your alerts",
-      "/price — live price",
-      "/settings — preferences",
-      "/support — official links",
-      "",
-      "BLARC never asks for a seed phrase or private key.",
-    ].join("\n"),
-  );
+  await openFeatureFromCommand("start", message, []);
 }
 
 async function handleHelp(message) {
-  await sendGuide(message.chat.id, "help.jpg", "Help: /copy, /alerts, /swap, /goal, /risk, /fee.");
-  await sendMessage(
-    message.chat.id,
-    [
-      "<b>BLARC</b>",
-      "/start — welcome",
-      "/create — new wallet, seed shown once after you confirm",
-      "/connect — pair wallet",
-      "/disconnect — forget address",
-      "/fee — fee wallet",
-      "/swap — sign a swap",
-      "/wallet — save address",
-      "/wallets — list addresses",
-      "/remove_wallet — remove address",
-      "/copy — watch a wallet",
-      "/copies — your watches",
-      "/uncopy — stop a watch",
-      "/auto — auto-ask to sign",
-      "/goal — weekly goal",
-      "/risk — risk tier",
-      "/scan — token check",
-      "/watch — price target",
-      "/watch rearm — arm targets again",
-      "/unwatch — remove target",
-      "/watchlist — targets",
-      "/price — live price",
-      "/alerts — alerts on or off",
-      "/settings — preferences",
-      "/support — links",
-      "/about — status",
-      "",
-      "Swaps include a 1% fee inside the transaction you sign. It is not listed on each trade. /about says the same. /fee shows the public fee wallet only if you ask.",
-    ].join("\n"),
-  );
+  await openFeatureFromCommand("help", message, []);
 }
 
-async function handleConnect(message, args) {
+export async function handleConnect(message, args) {
   if (looksLikeSecretMaterial(args.join(" "))) {
     await sendMessage(
       message.chat.id,
@@ -345,7 +305,7 @@ async function failPairing(chatId, generation, error) {
   }
 }
 
-async function handleDisconnect(message) {
+export async function handleDisconnect(message) {
   nextPairingGeneration(message.chat.id);
   await dropChatSession(message.chat.id);
   const outcome = await mutateState((state) => {
@@ -362,7 +322,7 @@ async function handleDisconnect(message) {
   );
 }
 
-async function handleFee(message) {
+export async function handleFee(message) {
   const status = feeWalletStatus();
   if (status.state === "missing") {
     await sendMessage(
@@ -414,7 +374,7 @@ async function handleFee(message) {
   await sendMessage(message.chat.id, lines.join("\n"));
 }
 
-async function handleSwap(message, args) {
+export async function handleSwap(message, args) {
   if (looksLikeSecretMaterial(args.join(" "))) {
     await sendMessage(
       message.chat.id,
@@ -500,7 +460,7 @@ async function handleRemoveWallet(message, args) {
   });
 }
 
-async function handleScan(message, args) {
+export async function handleScan(message, args) {
   const target = args[0];
   if (!target) {
     await sendMessage(message.chat.id, "Usage: /scan &lt;contract-address&gt;");
@@ -628,7 +588,7 @@ async function removeWallet(message, args, options) {
   );
 }
 
-async function handlePrice(message, args) {
+export async function handlePrice(message, args) {
   const target = args.join(" ");
   if (!target) {
     await sendMessage(message.chat.id, "Usage: /price &lt;symbol-or-contract&gt;");
@@ -729,7 +689,7 @@ function buildExplorerLink(wallet, chain) {
   return "";
 }
 
-async function handleSettings(message) {
+export async function handleSettings(message) {
   const state = await readState();
   const chat = state.chats?.[String(message.chat.id)];
   const alertsOn = chat ? chat.alerts !== false : true;
@@ -752,7 +712,7 @@ async function handleSettings(message) {
   );
 }
 
-async function handleSupport(message) {
+export async function handleSupport(message) {
   await sendMessage(
     message.chat.id,
     [
@@ -769,7 +729,7 @@ async function handleSupport(message) {
   );
 }
 
-async function handleAbout(message) {
+export async function handleAbout(message) {
   await sendMessage(
     message.chat.id,
     [

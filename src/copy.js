@@ -156,25 +156,29 @@ export async function handleCopyCallback(callback) {
   const chatId = callback?.message?.chat?.id;
   const data = String(callback?.data || "");
   const action = data.startsWith("cp:") ? "copy" : data.startsWith("sk:") ? "skip" : null;
-  if (!action || !chatId) {
+  if (!action) {
+    return false;
+  }
+  if (!chatId) {
     await answerCallback(callback?.id, "That button is not active.");
-    return;
+    return true;
   }
   const taken = await takePending(chatId, data.slice(3));
   await clearButtons(chatId, callback?.message?.message_id);
   if (!taken.pending) {
     await answerCallback(callback.id, taken.reason);
     await sendMessage(chatId, escapeHtml(taken.reason));
-    return;
+    return true;
   }
   if (action === "skip") {
     await answerCallback(callback.id, "Skipped");
     await sendMessage(chatId, "Skipped. Nothing was sent.");
-    return;
+    return true;
   }
   await answerCallback(callback.id, "Copy");
   const reply = await performCopy(chatId, taken.pending);
   await sendMessage(chatId, reply);
+  return true;
 }
 
 export function formatCopyStatus(chat, options = {}) {

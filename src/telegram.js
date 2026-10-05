@@ -38,6 +38,32 @@ export async function sendPlain(chatId, text) {
   });
 }
 
+export async function editMessageText(chatId, messageId, text, options = {}) {
+  return telegram("editMessageText", {
+    chat_id: chatId,
+    message_id: messageId,
+    text,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+    ...options,
+  });
+}
+
+export async function answerCallbackQuery(callbackQueryId, text = "") {
+  if (!callbackQueryId) {
+    return null;
+  }
+  try {
+    return await telegram("answerCallbackQuery", {
+      callback_query_id: callbackQueryId,
+      text: String(text || "").slice(0, 180),
+    });
+  } catch (error) {
+    console.error("answerCallbackQuery failed:", error.message);
+    return null;
+  }
+}
+
 export async function sendPhoto(chatId, png, caption) {
   return postPhoto(chatId, new Blob([png], { type: "image/png" }), "blarc-connect.png", caption);
 }
@@ -97,4 +123,12 @@ export function sleep(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+export function inlineKeyboard(rows) {
+  return { inline_keyboard: rows };
+}
+
+export function btn(text, data) {
+  return { text, callback_data: String(data).slice(0, 64) };
 }
