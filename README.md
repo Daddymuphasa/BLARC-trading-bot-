@@ -80,6 +80,8 @@ python -m http.server 4173
 
 Then visit `http://localhost:4173`. On a VPS, point nginx, Caddy, or another static server at the same directory. DNS for blarc.tech is set up separately with the host you choose.
 
+The CSP in `index.html` deliberately omits `upgrade-insecure-requests` until GitHub Pages has issued the blarc.tech certificate and HTTPS is enforced. With it on and no cert, browsers visiting http://blarc.tech upgrade the CSS, JS, and image requests to HTTPS, those fail, and the page loads unstyled. Once HTTPS is enforced it can be added back.
+
 ## Run The Telegram Bot
 
 Requires Node.js 20 or newer. The bot is plain Node ESM and starts with `node src/bot.js`.
