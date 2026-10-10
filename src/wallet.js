@@ -529,3 +529,29 @@ function cloneJson(value) {
   }
   return JSON.parse(JSON.stringify(value));
 }
+
+// Telegram URL buttons only accept http(s) and tg:// links, so raw wc: URIs cannot be buttons.
+// These are each wallet's https universal link (from the WalletConnect/Reown explorer) wrapping the pairing URI.
+const WALLET_LINKS = [
+  { id: "metamask", label: "🦊 MetaMask", base: "https://metamask.app.link/wc" },
+  { id: "trust", label: "🛡️ Trust Wallet", base: "https://link.trustwallet.com/wc" },
+  { id: "rainbow", label: "🌈 Rainbow", base: "https://rnbwapp.com/wc" },
+  { id: "bitget", label: "🅱️ Bitget Wallet", base: "https://bkapp.vip/wc" },
+  { id: "zerion", label: "⚡ Zerion", base: "https://wallet.zerion.io/wc" },
+  { id: "uniswap", label: "🦄 Uniswap Wallet", base: "https://uniswap.org/app/wc" },
+];
+
+export function walletDeepLinks(uri) {
+  if (!/^wc:/i.test(String(uri || ""))) {
+    return [];
+  }
+  const encoded = encodeURIComponent(uri);
+  return WALLET_LINKS.map((wallet) => ({ ...wallet, url: `${wallet.base}?uri=${encoded}` }));
+}
+
+export function connectPageLink(baseUrl, uri) {
+  if (!baseUrl || !/^https?:\/\//i.test(baseUrl) || !/^wc:/i.test(String(uri || ""))) {
+    return "";
+  }
+  return `${baseUrl.split("#")[0]}#uri=${encodeURIComponent(uri)}`;
+}

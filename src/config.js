@@ -43,3 +43,6 @@ export function solanaRpcUrl() {
   return String(process.env.BLARC_SOLANA_RPC_URL || "").trim() || SOLANA_PUBLIC_RPC;
 }
 
+
+// Hosted "pick your wallet" page. The pairing URI rides in the #fragment, so it is never sent to the web server.
+export const connectPageUrl = String(process.env.BLARC_CONNECT_PAGE_URL || "http://blarc.tech/connect.html").trim();

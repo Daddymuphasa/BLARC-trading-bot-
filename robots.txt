@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /connect.html
 
 Sitemap: https://blarc.tech/sitemap.xml

@@ -209,7 +209,6 @@ async function routeUi(chatId, action, args, ctx) {
       await answerCallbackQuery(ctx.callbackId, "Opening connect…");
       clearUiPrompt(chatId);
       await runAsCommand(chatId, ctx.from, "connect");
-      await showScreen(chatId, "Scan the QR in your wallet app, then come back here.", inlineKeyboard([navRow()]));
       return;
     case "create":
       await answerCallbackQuery(ctx.callbackId, "Opening create…");

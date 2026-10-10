@@ -4,6 +4,7 @@ import {
   disconnectTopic,
   dropChatSession,
   CELO_CHAIN_ID,
+  connectPageLink,
   feeWalletStatus,
   looksLikeSecretMaterial,
   pairingQrPng,
@@ -13,12 +14,13 @@ import {
   publicSolanaFromSession,
   sanitizeWallet,
   SOLANA_SENTINEL_CHAIN_ID,
+  walletDeepLinks,
 } from "./wallet.js";
 import { buildMarketRiskLines, classifyAddress, findBestPair, formatPairSummary } from "./dexscreener.js";
-import { adminIds, maxPriceWatches, supportUrl, twitterUrl, updatesUrl } from "./config.js";
+import { adminIds, connectPageUrl, maxPriceWatches, supportUrl, twitterUrl, updatesUrl } from "./config.js";
 import { ensureChatState, mutateState, readState, upsertChat } from "./state.js";
 import { formatCreatedWallet, handleCreate, handleCreateCallback } from "./createCommand.js";
-import { answerCallbackQuery, escapeHtml, sendGuide, sendMessage, sendPhoto, sendPlain, sleep } from "./telegram.js";
+import { answerCallbackQuery, btn, copyBtn, escapeHtml, inlineKeyboard, sendGuide, sendMessage, sendPhoto, sendPlain, sleep, urlBtn } from "./telegram.js";
 import { handleAlerts, handleUnwatch, handleWatch, handleWatchlist } from "./alerts.js";
 import { ensurePairCard } from "./cards.js";
 import { executeSwap, swapApiKey } from "./swap.js";
@@ -170,31 +172,68 @@ export async function handleConnect(message, args) {
     return;
   }
 
-  await sendMessage(
-    chatId,
-    [
-      "<b>Connect your wallet</b>",
-      "Scan the QR in your own wallet app, or paste the pairing URI that follows into that app.",
-      "",
-      "No wallet yet? Create one in MetaMask, Rainbow, Trust Wallet, or another wallet you control, then approve this pairing. BLARC does not generate a wallet and will never show a seed phrase.",
-      "",
-      "Approving shares a public address only. This step does not send a transaction.",
-    ].join("\n"),
-  );
+  await sendConnectCard(chatId, generation, pairing.uri);
+}
 
+const COPY_TEXT_MAX = 256;
+
+function connectKeyboard(uri) {
+  const wallets = walletDeepLinks(uri);
+  const rows = [];
+  for (let i = 0; i < wallets.length; i += 2) {
+    rows.push(wallets.slice(i, i + 2).map((wallet) => urlBtn(wallet.label, wallet.url)));
+  }
+  const page = connectPageLink(connectPageUrl, uri);
+  if (page) {
+    rows.push([urlBtn("🌐 Other wallets", page)]);
+  }
+  if (uri.length <= COPY_TEXT_MAX) {
+    rows.push([copyBtn("📋 Copy pairing link", uri)]);
+  }
+  rows.push([btn("⬅️ Back", "ui:back"), btn("🏠 Home", "ui:home")]);
+  return inlineKeyboard(rows);
+}
+
+async function sendConnectCard(chatId, generation, uri) {
+  const caption = [
+    "<b>🔗 Connect your wallet</b>",
+    "",
+    "📱 <b>On your phone:</b> tap your wallet below. It opens the app, then tap <b>Connect</b>.",
+    "💻 <b>On desktop:</b> scan this QR with your wallet app.",
+    "",
+    "Come back here after you approve. BLARC only gets your public address. No transaction is sent, and BLARC never asks for your seed phrase.",
+  ].join("\n");
+  const replyMarkup = connectKeyboard(uri);
+
+  let sent = false;
   try {
-    const png = await pairingQrPng(pairing.uri);
-    await sendPhoto(chatId, png, "BLARC WalletConnect pairing QR. Your keys stay in your wallet app.");
+    const png = await pairingQrPng(uri);
+    if (currentPairingGeneration(chatId) !== generation) {
+      return;
+    }
+    await sendPhoto(chatId, png, caption, { parseMode: "HTML", replyMarkup });
+    sent = true;
   } catch (error) {
-    console.error("WalletConnect QR failed:", publicWalletError(error));
-    await sendMessage(chatId, "The QR image could not be sent. Use the pairing URI below in your wallet app.");
+    console.error("WalletConnect connect card failed:", publicWalletError(error));
   }
 
-  if (currentPairingGeneration(chatId) !== generation) {
-    return;
+  if (!sent) {
+    if (currentPairingGeneration(chatId) !== generation) {
+      return;
+    }
+    try {
+      await sendMessage(chatId, caption.replace("💻 <b>On desktop:</b> scan this QR with your wallet app.", "💻 <b>On desktop:</b> copy the pairing link into your wallet app."), { reply_markup: replyMarkup });
+    } catch (error) {
+      console.error("WalletConnect connect message failed:", publicWalletError(error));
+      await sendMessage(chatId, "<b>Connect your wallet</b>\nPaste the pairing link below into your wallet app.");
+      await sendPlain(chatId, uri);
+      return;
+    }
   }
 
-  await sendPlain(chatId, pairing.uri);
+  if (uri.length > COPY_TEXT_MAX && currentPairingGeneration(chatId) === generation) {
+    await sendPlain(chatId, uri);
+  }
 }
 
 function nextPairingGeneration(chatId) {

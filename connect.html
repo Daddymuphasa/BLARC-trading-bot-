@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>BLARC | Connect your wallet</title>
+    <meta name="theme-color" content="#08111a" />
+    <link rel="icon" href="favicon.ico" />
+    <link rel="stylesheet" href="connect.css" />
+  </head>
+  <body>
+    <main class="card">
+      <img class="mark" src="assets/favicon-192.png" alt="" width="56" height="56" />
+      <h1>Connect your wallet</h1>
+      <p class="lead">Tap your wallet. It opens the app. Approve, then go back to Telegram.</p>
+
+      <div id="ready" hidden>
+        <a id="open-any" class="primary" href="#">Open my wallet app</a>
+        <p class="hint">Opens whichever WalletConnect wallet is installed (best on Android).</p>
+        <div id="wallets" class="grid"></div>
+        <button id="copy" class="ghost" type="button">Copy pairing link</button>
+        <p id="copied" class="hint" hidden>Copied. Paste it into your wallet's WalletConnect screen.</p>
+      </div>
+
+      <div id="missing" hidden>
+        <p class="warn">This link is missing its pairing code or it expired. Go back to @theBLARCbot and tap Connect wallet again.</p>
+      </div>
+
+      <a class="back" href="https://t.me/theBLARCbot">Back to @theBLARCbot</a>
+      <p class="fine">Non-custodial. BLARC only receives your public address. Never share your seed phrase.</p>
+    </main>
+    <script src="connect.js"></script>
+  </body>
+</html>

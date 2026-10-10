@@ -64,8 +64,8 @@ export async function answerCallbackQuery(callbackQueryId, text = "") {
   }
 }
 
-export async function sendPhoto(chatId, png, caption) {
-  return postPhoto(chatId, new Blob([png], { type: "image/png" }), "blarc-connect.png", caption);
+export async function sendPhoto(chatId, png, caption, options = {}) {
+  return postPhoto(chatId, new Blob([png], { type: "image/png" }), "blarc-connect.png", caption, options);
 }
 
 export async function sendPhotoFile(chatId, filePath, caption, options = {}) {
@@ -127,6 +127,14 @@ export function sleep(ms) {
 
 export function inlineKeyboard(rows) {
   return { inline_keyboard: rows };
+}
+
+export function urlBtn(text, url) {
+  return { text, url };
+}
+
+export function copyBtn(text, value) {
+  return { text, copy_text: { text: String(value) } };
 }
 
 export function btn(text, data) {
