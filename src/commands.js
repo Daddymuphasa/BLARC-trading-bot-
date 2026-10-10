@@ -719,6 +719,7 @@ export async function handleSupport(message) {
       "<b>Official BLARC Links</b>",
       `Support hub: ${escapeHtml(supportUrl)}`,
       `Updates: ${escapeHtml(updatesUrl)}`,
+      "Website: https://blarc.tech",
       twitterUrl ? `Twitter: ${escapeHtml(twitterUrl)}` : "Twitter: handle not set yet",
       "",
       "Security reminder: BLARC support will never ask for your seed phrase, private key, or Telegram login code.",

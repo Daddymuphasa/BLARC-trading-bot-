@@ -5,322 +5,325 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests"
+      content="default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
     />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <title>BLARC | Tap-to-trade crypto in Telegram</title>
     <meta
       name="description"
-      content="BLARC is a Telegram-native DeFi trading bot concept for fast multi-chain execution, wallet monitoring, copy trading, sniping, and security-aware automation on the Arc blockchain."
+      content="BLARC is a non-custodial Telegram trading bot. Tap to swap on Solana, Robinhood Chain, and EVM, copy trades, set price alerts, and scan tokens. You sign every trade in your own wallet."
     />
-    <title>BLARC | Telegram Trading Bot for Arc DeFi</title>
-    <link rel="icon" href="assets/blarc-mark-light.jpg" />
+    <link rel="canonical" href="https://blarc.tech/" />
+    <meta name="theme-color" content="#08111a" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="BLARC" />
+    <meta property="og:url" content="https://blarc.tech/" />
+    <meta property="og:title" content="BLARC | Tap-to-trade crypto in Telegram" />
+    <meta
+      property="og:description"
+      content="Quick swaps, copy trading, price alerts, and token scans in Telegram. Non-custodial: you sign every trade."
+    />
+    <meta property="og:image" content="https://blarc.tech/assets/og-card.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="BLARC mascot waving next to the word Welcome" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@blARCthedawg" />
+    <meta name="twitter:title" content="BLARC | Tap-to-trade crypto in Telegram" />
+    <meta
+      name="twitter:description"
+      content="Quick swaps, copy trading, price alerts, and token scans in Telegram. You sign every trade."
+    />
+    <meta name="twitter:image" content="https://blarc.tech/assets/og-card.jpg" />
+
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192.png" />
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header class="site-header" data-elevated="false">
       <a class="brand" href="#top" aria-label="BLARC home">
-        <img src="assets/blarc-mark-light.jpg" alt="" />
+        <img src="assets/favicon-192.png" alt="" />
         <span>BLARC</span>
       </a>
       <nav class="nav-links" aria-label="Primary navigation">
-        <a href="#bot">Bot</a>
-        <a href="#products">Products</a>
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
         <a href="#security">Security</a>
-        <a href="#premium">Premium</a>
+        <a href="#faq">FAQ</a>
         <a href="#community">Community</a>
       </nav>
-      <a class="header-cta" href="#launch">Launch</a>
+      <a class="header-cta" href="https://t.me/theBLARCbot" rel="noopener">Open bot</a>
     </header>
 
     <main id="top">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow">Directly on Telegram</p>
-          <h1 id="hero-title">The Arc-native trading command center for DeFi speed.</h1>
+          <p class="eyebrow">Live on Telegram</p>
+          <h1 id="hero-title">Tap to trade. You sign.</h1>
           <p class="hero-text">
-            BLARC brings sniping, copy trading, limit orders, wallet alerts, token scanning,
-            and cross-chain execution into one focused Telegram workflow.
+            BLARC puts quick swaps, copy trading, price alerts, and token scans behind a few taps in
+            Telegram. Your keys stay in your wallet, and every trade waits for your signature.
           </p>
-          <div class="hero-actions" id="launch">
-            <a class="button primary" href="https://t.me/theBLARCbot" rel="noopener">Launch BLARC Bot</a>
-            <a class="button secondary" href="#security">Review Security</a>
+          <div class="hero-actions">
+            <a class="button primary" href="https://t.me/theBLARCbot" rel="noopener">Open @theBLARCbot</a>
+            <a class="button secondary" href="https://x.com/blARCthedawg" rel="noopener">Follow on X</a>
           </div>
-          <dl class="hero-stats" aria-label="Platform highlights">
-            <div>
-              <dt>12</dt>
-              <dd>core automations</dd>
-            </div>
-            <div>
-              <dt>10</dt>
-              <dd>wallet lanes</dd>
-            </div>
-            <div>
-              <dt>24/7</dt>
-              <dd>support posture</dd>
-            </div>
-          </dl>
+          <ul class="hero-points" aria-label="Highlights">
+            <li>Non-custodial</li>
+            <li>Button-first menu</li>
+            <li>Solana, Robinhood Chain, EVM</li>
+          </ul>
         </div>
-        <div class="hero-visual" aria-label="BLARC mascot and product preview">
+        <div class="hero-visual" aria-label="BLARC mascot and bot menu preview">
           <img src="assets/blarc-mascot.jpg" alt="BLARC mascot logo" />
           <div class="terminal-card" aria-hidden="true">
-            <span class="pulse"></span>
-            <p>/snipe ARC 0.8 ETH max</p>
-            <strong>MEV shield: armed</strong>
+            <p><span class="pulse"></span>Tap a button below.</p>
+            <div class="menu-grid">
+              <span>🔄 Swap</span>
+              <span>📋 Copy trade</span>
+              <span>🔔 Price alerts</span>
+              <span>👀 Watchlist</span>
+            </div>
+            <strong>You sign every swap in your own wallet.</strong>
           </div>
         </div>
       </section>
 
       <section class="chain-strip" aria-label="Supported chains">
         <div class="marquee">
+          <span>Solana</span>
+          <span>Robinhood Chain</span>
           <span>Arc</span>
           <span>Ethereum</span>
-          <span>BNB Chain</span>
-          <span>Solana</span>
           <span>Base</span>
           <span>Arbitrum</span>
-          <span>Tron</span>
+          <span>BNB Chain</span>
+          <span>Optimism</span>
+          <span>Polygon</span>
           <span>Avalanche</span>
-          <span>TON</span>
-          <span>Monad</span>
-          <span>Sonic</span>
+          <span>Solana</span>
+          <span>Robinhood Chain</span>
           <span>Arc</span>
           <span>Ethereum</span>
-          <span>BNB Chain</span>
-          <span>Solana</span>
           <span>Base</span>
+          <span>Arbitrum</span>
+          <span>BNB Chain</span>
+          <span>Optimism</span>
+          <span>Polygon</span>
+          <span>Avalanche</span>
         </div>
       </section>
 
       <section class="section intro-grid" id="bot" aria-labelledby="bot-title">
         <div>
-          <p class="eyebrow">BLARC Bot</p>
-          <h2 id="bot-title">One setup for high-speed on-chain trading.</h2>
+          <p class="eyebrow">The bot</p>
+          <h2 id="bot-title">No commands to memorize.</h2>
           <p>
-            Built as a Telegram-first control surface, BLARC keeps the workflows traders repeat all
-            day within reach: buy, sell, monitor, bridge, protect, and automate.
+            Send <code>/start</code> once and BLARC opens a home menu of buttons. Pick the token to
+            sell, the token to buy, and an amount, then confirm. Every screen has Back and Home, so
+            you never get lost.
+          </p>
+          <p>
+            You only type when a button can't do the job: a custom token or amount, a trader's
+            wallet to copy, or a price target for an alert.
           </p>
           <div class="inline-actions">
-            <a class="button primary" href="https://t.me/theBLARCbot" rel="noopener">Launch on Telegram</a>
-            <a class="button ghost" href="#docs">Documentation</a>
+            <a class="button primary" href="https://t.me/theBLARCbot" rel="noopener">Try it on Telegram</a>
+            <a class="button ghost" href="#how">How it works</a>
           </div>
         </div>
-        <div class="mock-phone" aria-label="BLARC bot interface preview">
+        <div class="mock-phone" aria-label="Example swap screen in the BLARC bot">
           <div class="phone-top"></div>
-          <div class="message sent">/buy ARC 0.45</div>
           <div class="message received">
-            Token scan passed<br />
-            Liquidity locked<br />
-            Tax: 3% / 3%
+            <b>Swap</b><br />
+            Sell: SOL<br />
+            Buy: USDC<br />
+            Amount: 0.5
+          </div>
+          <div class="tap-row" aria-hidden="true">
+            <span>0.1</span><span class="is-picked">0.5</span><span>1</span><span>Custom</span>
+          </div>
+          <div class="tap-row wide" aria-hidden="true">
+            <span class="confirm">✅ Confirm</span>
+          </div>
+          <div class="tap-row" aria-hidden="true">
+            <span>⬅️ Back</span><span>🏠 Home</span>
           </div>
           <div class="trade-panel">
-            <span>Position</span>
-            <strong>+18.4%</strong>
-            <small>Take-profit armed at +35%</small>
+            <span>Next step</span>
+            <strong>Sign</strong>
+            <small>Approve in your own wallet. Nothing moves until you do.</small>
           </div>
         </div>
       </section>
 
-      <section class="section" aria-labelledby="features-title">
+      <section class="section" id="features" aria-labelledby="features-title">
         <div class="section-heading">
-          <p class="eyebrow">Core Features</p>
-          <h2 id="features-title">Everything expected from a serious DeFi Telegram bot.</h2>
+          <p class="eyebrow">Features</p>
+          <h2 id="features-title">What BLARC does today.</h2>
         </div>
         <div class="feature-grid">
           <article>
             <span>01</span>
-            <h3>Cashback</h3>
-            <p>Rebate-friendly fee accounting designed to reward repeat trading volume.</p>
+            <h3>Quick swaps</h3>
+            <p>Swap on Solana, Robinhood Chain, and other EVM chains. Tap the tokens and amount, then sign.</p>
           </article>
           <article>
             <span>02</span>
-            <h3>Auto Snipe</h3>
-            <p>Preset launch entries with max spend, slippage, gas, and token checks.</p>
+            <h3>Copy trading</h3>
+            <p>Watch any public wallet. When it trades, you get one-tap Copy or Skip.</p>
           </article>
           <article>
             <span>03</span>
-            <h3>Copy Trade</h3>
-            <p>Track selected wallets and mirror buys or sells with your own risk limits.</p>
+            <h3>Price alerts</h3>
+            <p>Set above or below targets and get a Telegram ping when price crosses them.</p>
           </article>
           <article>
             <span>04</span>
-            <h3>Limit Orders</h3>
-            <p>Trigger buys or exits when price, liquidity, or market-cap conditions hit.</p>
+            <h3>Watchlist</h3>
+            <p>Keep the tokens you care about in one list with their latest USD price.</p>
           </article>
           <article>
             <span>05</span>
-            <h3>Multi-Wallet</h3>
-            <p>Route trades across up to ten wallet lanes without leaving Telegram.</p>
+            <h3>Token scan cards</h3>
+            <p>Paste a contract to see liquidity, volume, and pair age on a clean card.</p>
           </article>
           <article>
             <span>06</span>
-            <h3>Signals</h3>
-            <p>Turn trusted call channels into guarded trade prompts and auto-buys.</p>
+            <h3>Goal, Risk, Auto</h3>
+            <p>Set a weekly goal and a risk tier. Auto mode prepares trades but still asks you to sign.</p>
           </article>
           <article>
             <span>07</span>
-            <h3>Trade Monitor</h3>
-            <p>Follow live PnL, taxes, approvals, stops, take-profits, and open orders.</p>
+            <h3>Create or connect</h3>
+            <p>Connect any wallet with WalletConnect, or create a new one. The seed is shown once, then forgotten.</p>
           </article>
           <article>
             <span>08</span>
-            <h3>Funds Management</h3>
-            <p>Split, consolidate, bridge, and send funds with clear confirmation steps.</p>
-          </article>
-          <article>
-            <span>09</span>
-            <h3>Bridge</h3>
-            <p>Move between supported networks through a single guided flow.</p>
-          </article>
-          <article>
-            <span>10</span>
-            <h3>TG Scraper</h3>
-            <p>Detect contract addresses from channels and groups in real time.</p>
-          </article>
-          <article>
-            <span>11</span>
-            <h3>Referrals</h3>
-            <p>Lifetime referral tracking for builders, callers, and communities.</p>
-          </article>
-          <article>
-            <span>12</span>
-            <h3>24/7 Support</h3>
-            <p>Always-on help paths for setup, recovery, and product questions.</p>
+            <h3>Runs anywhere</h3>
+            <p>Plain Node with a Docker setup, so other teams can run BLARC for their own groups.</p>
           </article>
         </div>
       </section>
 
-      <section class="section product-suite" id="products" aria-labelledby="products-title">
+      <section class="section product-suite" id="mod" aria-labelledby="mod-title">
+        <div class="product-panel">
+          <div>
+            <p class="eyebrow">Built to extend</p>
+            <h2 id="mod-title">From trading bot to community moderator.</h2>
+            <p>
+              BLARC is designed to extend into an AI-assisted community moderator for other
+              projects: admin announcements, official-link and anti-phishing replies, and a portable
+              Docker setup any team can run in its own Telegram group.
+            </p>
+          </div>
+          <img class="panel-image" src="assets/blarc-mark-light.jpg" alt="BLARC mark: on the Arc blockchain" loading="lazy" />
+        </div>
+      </section>
+
+      <section class="section" id="how" aria-labelledby="how-title">
         <div class="section-heading">
-          <p class="eyebrow">Ecosystem</p>
-          <h2 id="products-title">Four products around the flagship bot.</h2>
+          <p class="eyebrow">How it works</p>
+          <h2 id="how-title">Four taps from open to done.</h2>
         </div>
-        <div class="product-tabs" role="tablist" aria-label="BLARC product suite">
-          <button class="tab is-active" role="tab" aria-selected="true" aria-controls="panel-scraper" id="tab-scraper">Scraper</button>
-          <button class="tab" role="tab" aria-selected="false" aria-controls="panel-wallet" id="tab-wallet">Wallet Bot</button>
-          <button class="tab" role="tab" aria-selected="false" aria-controls="panel-whale" id="tab-whale">Whale Bot</button>
-          <button class="tab" role="tab" aria-selected="false" aria-controls="panel-buy" id="tab-buy">Buy Bot</button>
-        </div>
-        <div class="product-panels">
-          <article class="product-panel is-active" role="tabpanel" id="panel-scraper" aria-labelledby="tab-scraper">
-            <div>
-              <p class="eyebrow">BLARC Scraper</p>
-              <h3>Contract discovery from signal channels.</h3>
-              <p>
-                Desktop and Telegram-aware scraping for contract addresses, duplicate detection,
-                per-channel rules, and safe forwarding into guarded BLARC entries.
-              </p>
-            </div>
-            <div class="panel-screen">ETH 0x... detected<br />Filter: fresh deploy<br />Forwarded to BLARC</div>
-          </article>
-          <article class="product-panel" role="tabpanel" id="panel-wallet" aria-labelledby="tab-wallet" hidden>
-            <div>
-              <p class="eyebrow">BLARC Wallet Bot</p>
-              <h3>Balances and price alerts without app switching.</h3>
-              <p>
-                Monitor Arc, EVM, and Solana wallets with balance snapshots, threshold alerts,
-                allowance reminders, and portfolio movement summaries.
-              </p>
-            </div>
-            <div class="panel-screen">Wallet A +4.2%<br />ARC balance updated<br />Alert: target reached</div>
-          </article>
-          <article class="product-panel" role="tabpanel" id="panel-whale" aria-labelledby="tab-whale" hidden>
-            <div>
-              <p class="eyebrow">BLARC Whale Bot</p>
-              <h3>Market-moving wallet intelligence.</h3>
-              <p>
-                Watch wallets that matter, receive transaction alerts, inspect token risk, and decide
-                whether to follow, fade, or ignore movement.
-              </p>
-            </div>
-            <div class="panel-screen">Whale buy: 41.8 ETH<br />Liquidity: healthy<br />Copy prompt ready</div>
-          </article>
-          <article class="product-panel" role="tabpanel" id="panel-buy" aria-labelledby="tab-buy" hidden>
-            <div>
-              <p class="eyebrow">BLARC Buy Bot</p>
-              <h3>Community trade feeds for token groups.</h3>
-              <p>
-                Buy and sell alerts, token panels, chart shortcuts, branded notifications, and
-                moderation-friendly settings for active crypto communities.
-              </p>
-            </div>
-            <div class="panel-screen">New buy +2.7 ETH<br />MC: $1.42M<br />Holders: 2,408</div>
-          </article>
+        <ol class="steps">
+          <li>
+            <span>1</span>
+            <h3>Open the bot</h3>
+            <p>Start <a href="https://t.me/theBLARCbot" rel="noopener">@theBLARCbot</a> in Telegram.</p>
+          </li>
+          <li>
+            <span>2</span>
+            <h3>Connect or create</h3>
+            <p>Link your wallet with WalletConnect, or create a fresh one in the bot.</p>
+          </li>
+          <li>
+            <span>3</span>
+            <h3>Tap token and amount</h3>
+            <p>Pick what to sell, what to buy, and how much.</p>
+          </li>
+          <li>
+            <span>4</span>
+            <h3>Confirm in your wallet</h3>
+            <p>Review and sign. BLARC never signs for you.</p>
+          </li>
+        </ol>
+        <div class="guide-grid">
+          <img src="assets/guides/welcome.jpg" alt="Welcome: paste a wallet to copy a trader, set a price alert, connect your wallet to trade" loading="lazy" />
+          <img src="assets/guides/trade.jpg" alt="Trade: you sign every swap, quick swap" loading="lazy" />
+          <img src="assets/guides/copy.jpg" alt="Copy: paste a public wallet, tap Copy or Skip, Auto still asks you to sign" loading="lazy" />
         </div>
       </section>
 
       <section class="section security" id="security" aria-labelledby="security-title">
         <div class="security-copy">
-          <p class="eyebrow">Security Architecture</p>
-          <h2 id="security-title">Fast trading needs careful guardrails.</h2>
+          <p class="eyebrow">Security</p>
+          <h2 id="security-title">Your keys never leave your wallet.</h2>
           <p>
-            BLARC’s public frontend is static and intentionally contains no private keys, seed
-            phrases, custodial logic, analytics trackers, or third-party scripts. Product messaging
-            emphasizes guarded automation, explicit confirmations, and operational hygiene.
+            BLARC only knows your public address. Trades are requested through WalletConnect and
+            signed by you. If something can't be prepared safely, nothing is sent.
           </p>
         </div>
         <div class="security-grid">
           <article>
-            <h3>Wallet Isolation</h3>
-            <p>Encourage dedicated trading wallets, spend ceilings, and revocable approvals.</p>
+            <h3>Non-custodial</h3>
+            <p>BLARC holds no private keys and cannot move funds on its own.</p>
           </article>
           <article>
-            <h3>MEV Awareness</h3>
-            <p>Support private routing, slippage caps, deadblock checks, and sandwich-risk warnings.</p>
+            <h3>WalletConnect</h3>
+            <p>Pair the wallet you already use. Each trade is a request you approve or reject.</p>
           </article>
           <article>
-            <h3>Token Risk Checks</h3>
-            <p>Surface liquidity, tax, owner, blacklist, honeypot, and mint authority signals.</p>
+            <h3>Seed shown once</h3>
+            <p>A wallet created in the bot shows its recovery phrase one time, then it is forgotten. Only the public address is kept.</p>
           </article>
           <article>
-            <h3>Phishing Resistance</h3>
-            <p>Use official links, signed release notes, clone warnings, and no backup-bot claims.</p>
+            <h3>Anti-phishing</h3>
+            <p>Official links live in the bot's Support screen. BLARC will never ask for your seed phrase, private key, or login code.</p>
           </article>
         </div>
       </section>
 
-      <section class="section premium" id="premium" aria-labelledby="premium-title">
+      <section class="section docs-community" id="faq" aria-labelledby="faq-title">
         <div>
-          <p class="eyebrow">BLARC Premium</p>
-          <h2 id="premium-title">More lanes for advanced traders.</h2>
-          <p>
-            Premium expands execution capacity for heavy users: faster queues, more copy wallets,
-            more concurrent snipes, launch simulation, longer trade monitors, and priority support.
-          </p>
-        </div>
-        <div class="price-card">
-          <span>Exclusive Offer</span>
-          <strong>$200</strong>
-          <small>per 30 days</small>
-          <a class="button primary" href="https://t.me/theBLARCbot" rel="noopener">Open /premium</a>
-        </div>
-      </section>
-
-      <section class="section docs-community" id="docs" aria-labelledby="docs-title">
-        <div>
-          <p class="eyebrow">Docs</p>
-          <h2 id="docs-title">Clear flows before live trading.</h2>
+          <p class="eyebrow">FAQ</p>
+          <h2 id="faq-title">Quick answers.</h2>
           <div class="accordion">
-            <button aria-expanded="true">What does BLARC automate?</button>
+            <button aria-expanded="true">Does BLARC hold my funds?</button>
             <div>
-              <p>Token buys and sells, snipes, copy trades, limit orders, wallet monitoring, contract forwarding, bridge actions, and community buy alerts.</p>
+              <p>No. You sign every trade in your own wallet. BLARC stores public addresses only.</p>
             </div>
-            <button aria-expanded="false">What should never be shared?</button>
+            <button aria-expanded="false">Which chains can I swap on?</button>
             <div hidden>
-              <p>Seed phrases, private keys, recovery codes, Telegram login codes, and exchange credentials should never be shared in chat or support tickets.</p>
+              <p>Solana, Robinhood Chain, and a set of EVM chains including Ethereum, Base, Arbitrum, BNB Chain, Optimism, Polygon, and Avalanche.</p>
             </div>
-            <button aria-expanded="false">Is this financial advice?</button>
+            <button aria-expanded="false">Does auto mode trade without me?</button>
             <div hidden>
-              <p>No. BLARC is a tooling interface concept. DeFi trading is high risk and users remain responsible for their own decisions and local compliance.</p>
+              <p>No. Auto prepares the trade and still asks you to sign it. No connected wallet means no trade.</p>
+            </div>
+            <button aria-expanded="false">Are there fees?</button>
+            <div hidden>
+              <p>A small fee is included inside each swap you sign. The bot's About and Guide screens have the details.</p>
+            </div>
+            <button aria-expanded="false">What should I never share?</button>
+            <div hidden>
+              <p>Your seed phrase, private keys, recovery codes, or Telegram login codes. Not in chat, not with support, not with anyone.</p>
             </div>
           </div>
         </div>
         <div class="community-card" id="community">
-          <img src="assets/blarc-poster-blue.jpg" alt="BLARC blue poster logo" />
-          <h2>Join the BLARC channels</h2>
-          <p>Updates, support, testimonials, alpha calls, and community product feedback.</p>
+          <img src="assets/blarc-poster-blue.jpg" alt="BLARC blue poster logo" loading="lazy" />
+          <h2>Join the BLARC community</h2>
+          <p>Get help, product updates, and news. These are the only official links.</p>
           <div class="community-links">
             <a href="https://t.me/theBLARCbot" rel="noopener">Bot</a>
-            <a href="https://t.me/BLARCUpdates" rel="noopener">Updates</a>
             <a href="https://t.me/BLARCHub" rel="noopener">Hub</a>
+            <a href="https://t.me/BLARCUpdates" rel="noopener">Updates</a>
+            <a href="https://x.com/blARCthedawg" rel="noopener">X</a>
           </div>
         </div>
       </section>
@@ -329,14 +332,20 @@
     <footer class="site-footer">
       <div>
         <strong>BLARC</strong>
-        <p>On the Arc blockchain.</p>
+        <p>blarc.tech · Non-custodial trading in Telegram.</p>
       </div>
       <nav aria-label="Footer navigation">
-        <a href="#bot">Bot</a>
-        <a href="#products">Products</a>
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
         <a href="#security">Security</a>
-        <a href="#premium">Premium</a>
+        <a href="https://t.me/BLARCHub" rel="noopener">Support</a>
       </nav>
+      <p class="legal">
+        Privacy: this site uses no cookies, trackers, or analytics. The bot stores only your
+        Telegram chat id, settings, watches, and public wallet addresses. Disclaimer: crypto trading is
+        risky. BLARC is software, not financial advice. You are responsible for your trades and
+        for following local law.
+      </p>
     </footer>
 
     <script src="script.js"></script>

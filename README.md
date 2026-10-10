@@ -4,16 +4,19 @@ BLARC is the Telegram bot @theBLARCbot plus a static product site. It is non-cus
 
 ## What Is Included
 
-### Website
+### Website (blarc.tech)
 
-- Hero section with BLARC mascot branding and Telegram launch CTA.
-- Supported-chain marquee.
-- Flagship bot overview.
-- Twelve core product features: cashback, auto snipe, copy trade, limit orders, multi-wallet, signals, trade monitor, funds management, bridge, Telegram scraper, referrals, and support.
-- Product tabs for Scraper, Wallet Bot, Whale Bot, and Buy Bot.
-- Security architecture section.
-- Premium offer section.
-- Documentation FAQ and community links.
+The static site at the repo root is intended for https://blarc.tech/. It describes only what the live bot does.
+
+- Hero: tap-to-trade in Telegram, you sign every trade. Links to @theBLARCbot and x.com/blARCthedawg.
+- Chain strip: Solana, Robinhood Chain, Arc, and the main EVM chains the bot swaps on.
+- Bot overview with a mock of the tap menu (sell, buy, amount, Confirm, Back, Home).
+- Features: quick swaps, copy trading (Copy or Skip), price alerts, watchlist, token scan cards, Goal/Risk/Auto, create or connect a wallet, Docker portability.
+- A short note that BLARC is designed to extend into an AI-assisted community moderator for other projects.
+- How it works: open the bot, connect or create a wallet, tap token and amount, confirm in your wallet.
+- Security: non-custodial, WalletConnect, seed shown once then forgotten, public addresses only, anti-phishing.
+- FAQ, official community links (t.me/BLARCHub, t.me/BLARCUpdates, x.com/blARCthedawg), and a privacy and disclaimer footer.
+- Open Graph and Twitter card tags, favicons cut from the BLARC mark, `robots.txt`, and `sitemap.xml` for https://blarc.tech/.
 
 ### Telegram Bot MVP
 
@@ -67,13 +70,15 @@ For any future trading backend, add threat modeling before implementation. At mi
 
 ## Local Preview
 
-The site is static (`index.html`, `styles.css`, `script.js`, and `assets/`). It does not need the bot process. Open `index.html` in a browser, or serve this directory with any static file server. For a quick local check:
+The site is static (`index.html`, `styles.css`, `script.js`, `assets/`, `favicon.ico`, `robots.txt`, `sitemap.xml`) and lives at the repo root, so GitHub Pages or Cloudflare Pages can serve the root directly with no build step. It does not need the bot process. The intended domain is https://blarc.tech/. Canonical, Open Graph, and sitemap URLs already point there.
+
+Preview it locally:
 
 ```bash
 python -m http.server 4173
 ```
 
-Then visit `http://localhost:4173`. On a VPS, point nginx, Caddy, or another static server at the same directory.
+Then visit `http://localhost:4173`. On a VPS, point nginx, Caddy, or another static server at the same directory. DNS for blarc.tech is set up separately with the host you choose.
 
 ## Run The Telegram Bot
 
@@ -111,10 +116,11 @@ The wallet packages are `@walletconnect/sign-client` and `qrcode`. EVM swaps are
 
 ## Files
 
-- `index.html` - page structure and content.
-- `styles.css` - responsive visual system.
-- `script.js` - tab switching, FAQ toggles, sticky header state.
-- `assets/` - BLARC mascot and logo images supplied for the brand.
+- `index.html` - page structure, copy, and meta tags for blarc.tech.
+- `styles.css` - responsive dark glass visual system.
+- `script.js` - FAQ toggles, card tilt, sticky header state.
+- `assets/` - BLARC mascot, logo, poster, guide cards, favicons, and the `og-card.jpg` share image.
+- `favicon.ico`, `robots.txt`, `sitemap.xml` - site metadata for https://blarc.tech/.
 - `src/bot.js` - thin entry: wires config, state, commands, and the price-alert loop, then polls Telegram.
 - `src/config.js` - environment reads and runtime constants.
 - `src/state.js` - local JSON state load and save.

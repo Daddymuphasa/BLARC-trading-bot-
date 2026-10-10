@@ -4,7 +4,7 @@ const panels = Array.from(document.querySelectorAll(".product-panel"));
 const accordionButtons = Array.from(document.querySelectorAll(".accordion button"));
 const interactiveCards = Array.from(
   document.querySelectorAll(
-    ".hero-visual, .hero-stats div, .feature-grid article, .product-panel, .mock-phone, .price-card, .community-card, .security-grid article",
+    ".hero-visual, .feature-grid article, .product-panel, .mock-phone, .community-card, .security-grid article, .steps li",
   ),
 );
 
