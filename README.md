@@ -27,6 +27,8 @@ The static site at the repo root is intended for https://blarc.tech/. It describ
 - `/disconnect` forgets that public address.
 - `/fee` shows the 1% (100 bps) fee and which public wallet applies to the connected chain.
 - `/swap <amount> <from> <to>` asks the user's wallet to sign one swap. The 1% is inside that transaction, paid to the chain's fee wallet. If the fee cannot be included, nothing is signed. On Solana the 1% is a transfer to `X4WBhCgYQFoeugPcevRxgAq7ZWuyu13w646Wh4WY5wL` inside that same transaction. Copies use that same fee path. If the transfer cannot be added, nothing is signed. On Robinhood (chain 4663) the signed call is the BLARC fee router `0x9FC7993E0250D54fE04317A99369Bdd3f0262D58`, which pays fee recipient `0x729241d4d22cb8bD54E9210D1FE1e16b74A2a784` and swaps the rest through SwapRouter02 `0xCaf681a66D020601342297493863E78C959E5cb2`. It is not a direct 0x swap. `/swap` uses `BLARC_ROBINHOOD_ROUTER` and refuses if that contract has no code or the fee wallet is not that recipient.
+- `/bridge` (or the 🌉 Bridge USDC button) moves USDC between mainnet chains with Circle Bridge Kit (CCTP v2, Fast transfer). Tap source chain → destination (Arc is starred) → amount (10/50/100/250 or custom) → Confirm. Sources are the chains your WalletConnect session shares from Arc, Base, Ethereum, Arbitrum, Optimism, Polygon, Avalanche, Unichain, Linea. Your wallet signs two transactions on the source chain (approve, then bridge). Circle's Forwarding Service mints on the destination, so no second-chain signature or destination gas is needed. Funds go to the same address. The 1% is a Bridge Kit custom fee added on top of the amount and paid on the source chain to that chain's fee wallet (`BLARC_FEE_ADDRESS_ARC` when the source is Arc, `BLARC_FEE_ADDRESS` otherwise). Arc keeps 10% of a Bridge Kit custom fee. If the quote does not carry exactly that fee, nothing is signed. A guard checks every wallet request first: it must be on the source chain, go to USDC or a Circle kit/CCTP contract, and approve no more than amount + fee.
+- `/arc` (or the 🟣 Arc button) is the Arc hub. 💱 Swap on Arc uses Circle Swap Kit for USDC, EURC, and cirBTC on Arc mainnet (chain 5042). Your wallet signs a USDC/EURC/cirBTC permit to the Circle kit adapter, then the swap. The 1% is a Swap Kit `customFee` (100 bps) to `BLARC_FEE_ADDRESS_ARC`, checked in the quote before anything is signed. A regular `/swap` on a wallet connected to Arc routes those three tokens through Swap Kit too. Other EVM chains still use 0x, Robinhood still uses the BLARC router, Solana still uses the Solana fee swap. Buy USDC (Onramp), Earn, Borrow, and One balance (Unified Balance) are shown as "soon" and do nothing yet.
 - `/wallet <address>` add a read-only public wallet.
 - `/copy <address>` watch a public Solana or EVM wallet. Seeds and private keys are rejected. A real trade gets Copy and Skip buttons. A Solana copy asks your wallet to sign the same 1% fee swap to `X4WBhCgYQFoeugPcevRxgAq7ZWuyu13w646Wh4WY5wL`. If that fee cannot be included, nothing is sent.
 - `/copies`, `/uncopy`, `/auto on|off`, `/goal <percent>`, `/risk low|average|high|daredevil`.
@@ -44,6 +46,16 @@ The static site at the repo root is intended for https://blarc.tech/. It describ
 - `/settings` user settings.
 - `/support` official links and anti-phishing reminder.
 - `/broadcast <message>` admin-only announcements.
+
+### Circle App Kits on Arc: what to know
+
+- Mainnet only. Bridge Kit and Swap Kit run on Arc mainnet (chain 5042, RPC `https://rpc.mainnet.arc.io`, explorer `https://explorer.arc.io`). Arc testnet is not wired in.
+- USDC is Arc's gas coin. Natively it has 18 decimals. Its ERC-20 interface at `0x3600000000000000000000000000000000000000` has 6. BLARC reads and approves through the ERC-20 interface (6 decimals) and only caps native value at the matching 18-decimal amount.
+- The user's wallet must have Arc added (chain id 5042, gas symbol USDC) and share it in the WalletConnect session to swap on Arc or bridge from Arc. Bridging to Arc needs no Arc signature.
+- Arc swaps need `eth_signTypedData_v4` (a USDC/EURC/cirBTC permit). New pairings request it. A wallet paired before this update must connect again.
+- Packages: `@circle-fin/bridge-kit`, `@circle-fin/swap-kit`, `@circle-fin/adapter-viem-v2`, `viem`. The viem adapter is driven by an in-process EIP-1193 provider that forwards each signing request to the user's wallet over WalletConnect. Reads use public RPCs.
+- `CIRCLE_API_KEY` is optional. Without it Swap Kit uses Circle's shared rate limit. For production traffic, create a mainnet API key in the Circle Console (https://console.circle.com/api-keys) and put it in `.env` (legacy `KIT_KEY` is also read). Bridge needs no key.
+- Not shipped yet: Onramp (needs a server session endpoint, a Circle Console key, and a hosted widget page), Earn, Borrow, Unified Balance, Solana ↔ Arc bridging, and Arc testnet.
 
 ## Security Notes
 
@@ -114,7 +126,7 @@ Optional: register Telegram command suggestions from a machine that has the fill
 npm run bot:commands
 ```
 
-The wallet packages are `@walletconnect/sign-client` and `qrcode`. EVM swaps are user-signed `eth_sendTransaction` requests. Solana swaps are user-signed `solana_signAndSendTransaction` requests with a 1% transfer in the same transaction. No swap is requested unless the 1% fee is inside it.
+The wallet packages are `@walletconnect/sign-client` and `qrcode`. Bridge and Arc swaps add Circle App Kits (`@circle-fin/bridge-kit`, `@circle-fin/swap-kit`, `@circle-fin/adapter-viem-v2`, `viem`). Those requests are also user-signed over WalletConnect. EVM swaps are user-signed `eth_sendTransaction` requests. Solana swaps are user-signed `solana_signAndSendTransaction` requests with a 1% transfer in the same transaction. No swap is requested unless the 1% fee is inside it.
 
 ## Files
 
@@ -133,6 +145,9 @@ The wallet packages are `@walletconnect/sign-client` and `qrcode`. EVM swaps are
 - `src/createCommand.js` - `/create` warning, confirmation button, one-time seed send, then public-address save.
 - `src/wallet.js` - WalletConnect pairing, public-address session, and user-signed `eth_sendTransaction` requests.
 - `src/swap.js` - 0x swap quote with the 1% fee inside the transaction, or a refusal. Chain 4663 calls the Robinhood fee router instead.
+- `src/arcKit.js` - Circle Bridge Kit and Swap Kit wired to the user's WalletConnect wallet: bridge quote and run, Arc swap, the 1% fee checks, and the signing guard.
+- `src/ui.js` - tap-first menus, including Bridge USDC and the Arc hub.
+- `scripts/check-arc-kit.js` - offline checks for the bridge fee math, approval and permit guards, and Arc swap pairs.
 - `src/copy.js` - public-wallet copy watches. Solana mirrors call the same 1% fee swap. Execution only calls the fee-aware swap.
 - `src/dexscreener.js` - read-only DexScreener market data adapter.
 - `src/cards.js` - one JPEG card per chain and token contract, built with sharp from the DexScreener pair and the local BLARC mascot.

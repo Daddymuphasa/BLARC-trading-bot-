@@ -4,7 +4,7 @@ import { getSdkError } from "@walletconnect/utils";
 
 export const FEE_BPS = 100;
 
-const EVM_METHODS = ["eth_sendTransaction", "personal_sign"];
+const EVM_METHODS = ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4"];
 const EVM_EVENTS = ["chainChanged", "accountsChanged"];
 const OPTIONAL_CHAINS = ["eip155:1", "eip155:8453", "eip155:42161", "eip155:10", "eip155:137", "eip155:56", "eip155:4663", "eip155:5042"];
 const SOLANA_WC_CHAIN = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
@@ -147,6 +147,77 @@ export async function requestWalletTransaction(chatId, chainId, tx) {
   );
 }
 
+
+// Chains and methods the live WalletConnect session granted for this chat. Public data only.
+export async function walletSessionInfo(chatId) {
+  const topic = sessionTopicByChat.get(String(chatId));
+  if (!topic) {
+    return null;
+  }
+  let session;
+  try {
+    const client = await getClient();
+    session = client.session.get(topic);
+  } catch {
+    return null;
+  }
+  const ns = session?.namespaces?.eip155;
+  if (!ns) {
+    return null;
+  }
+  const chainIds = new Set();
+  let address = null;
+  for (const account of Array.isArray(ns.accounts) ? ns.accounts : []) {
+    const parts = String(account).split(":");
+    if (parts.length < 3 || parts[0] !== "eip155" || !/^\d+$/.test(parts[1])) {
+      continue;
+    }
+    const addr = parts.slice(2).join(":");
+    if (!isEvmAddress(addr)) {
+      continue;
+    }
+    address = address || addr;
+    chainIds.add(Number(parts[1]));
+  }
+  return { address, chainIds, methods: new Set(Array.isArray(ns.methods) ? ns.methods : []) };
+}
+
+const WALLET_RPC_METHODS = new Set(["eth_sendTransaction", "eth_signTypedData_v4"]);
+
+// Forwards one signing request to the user's own wallet. BLARC never signs.
+export async function requestWalletRpc(chatId, chainId, method, params, from) {
+  if (!WALLET_RPC_METHODS.has(method)) {
+    throw new Error("That wallet request is not allowed.");
+  }
+  const topic = sessionTopicByChat.get(String(chatId));
+  if (!topic) {
+    throw new Error("Wallet session is not active. Run /connect again.");
+  }
+  const client = await getClient();
+  let session;
+  try {
+    session = client.session.get(topic);
+  } catch {
+    session = null;
+  }
+  if (!session) {
+    throw new Error("Wallet session is not active. Run /connect again.");
+  }
+  const accounts = session?.namespaces?.eip155?.accounts;
+  const wanted = `${chainId}:${String(from || "")}`.toLowerCase();
+  if (!Array.isArray(accounts) || !accounts.some((account) => String(account).toLowerCase() === wanted)) {
+    throw new Error("This wallet session does not include that chain. Add the network in your wallet, then run /connect again.");
+  }
+  const methods = session?.namespaces?.eip155?.methods;
+  if (Array.isArray(methods) && !methods.includes(method)) {
+    throw new Error("Your wallet session does not allow this signature type. Run /connect again.");
+  }
+  return withTimeout(
+    client.request({ topic, chainId, request: { method, params } }),
+    180000,
+    "The wallet did not respond in time. Nothing further was sent.",
+  );
+}
 
 export function publicSolanaFromSession(session) {
   const accounts = session?.namespaces?.solana?.accounts;

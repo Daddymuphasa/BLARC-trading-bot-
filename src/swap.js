@@ -1,5 +1,6 @@
-import { FEE_BPS, ROBINHOOD_CHAIN_ID, feeWalletForChain, hasWalletSession, isEvmAddress, requestWalletTransaction } from "./wallet.js";
+import { ARC_CHAIN_ID, FEE_BPS, ROBINHOOD_CHAIN_ID, feeWalletForChain, hasWalletSession, isEvmAddress, requestWalletTransaction } from "./wallet.js";
 import { executeSolanaSwap } from "./solanaSwap.js";
+import { executeArcKitSwap, isArcKitPair } from "./arcKit.js";
 import { escapeHtml } from "./telegram.js";
 
 const NATIVE = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
@@ -77,6 +78,13 @@ const KNOWN = {
     AVAX: [NATIVE, 18],
     WAVAX: ["0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7", 18],
     USDC: ["0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e", 6],
+  },
+  // Arc: USDC is the gas coin (18 decimals native) but its ERC-20 interface uses 6 decimals.
+  // These three route through Circle Swap Kit (see arcKit.js).
+  5042: {
+    USDC: ["0x3600000000000000000000000000000000000000", 6],
+    EURC: ["0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1", 6],
+    cirBTC: ["0x171A4217b86A807A64eB94757Db6849fb4bDbAA0", 8],
   },
   4663: {
     ETH: [NATIVE, 18],
@@ -187,6 +195,9 @@ export async function executeSwap({ chatId, wallet, amount, tokenIn, tokenOut })
   if (fee.chainId === ROBINHOOD_CHAIN_ID) {
     return executeRobinhoodSwap({ chatId, wallet, amount, tokenIn, tokenOut, fee });
   }
+  if (fee.chainId === ARC_CHAIN_ID && isArcKitPair(tokenIn, tokenOut)) {
+    return executeArcSwap({ chatId, wallet, amount, tokenIn, tokenOut, fee });
+  }
   if (!ZEROX_SWAP_CHAIN_IDS.has(fee.chainId)) {
     return refuse("This chain has no verified swap quote, so no transaction was built.");
   }
@@ -277,6 +288,44 @@ export async function executeSwap({ chatId, wallet, amount, tokenIn, tokenOut })
     return text(`Swap not sent. ${escapeHtml(safeError(error))} Nothing was signed by BLARC.`);
   }
   return text(signedSwapMessage({ wallet, sell, buy, amount, fee, quote, hash }));
+}
+
+async function executeArcSwap({ chatId, wallet, amount, tokenIn, tokenOut, fee }) {
+  if (!hasWalletSession(chatId)) {
+    return refuse("The WalletConnect session is not active. Run /connect again. Nothing was signed.");
+  }
+  const result = await executeArcKitSwap({
+    chatId,
+    address: wallet.address,
+    amount,
+    tokenIn,
+    tokenOut,
+    feeAddress: fee.address,
+  });
+  if (!result.ok) {
+    return escapeHtml(result.text);
+  }
+  const lines = [
+    "<b>BLARC swap · Arc</b>",
+    "Your wallet signed this swap. BLARC did not sign and does not hold a key.",
+    `Wallet: <code>${escapeHtml(wallet.address)}</code>`,
+    "Chain: <code>Arc</code>",
+    `Sell: <b>${escapeHtml(result.amount)} ${escapeHtml(result.sell.alias)}</b>`,
+    `Buy: <b>${escapeHtml(result.buy.alias)}</b>`,
+  ];
+  if (result.amountOut || result.estimated) {
+    lines.push(`Received: <b>~${escapeHtml(result.amountOut || result.estimated)} ${escapeHtml(result.buy.alias)}</b>`);
+  }
+  if (result.minimum) {
+    lines.push(`Minimum received: ${escapeHtml(result.minimum)} ${escapeHtml(result.buy.alias)}`);
+  }
+  if (result.hash) {
+    lines.push(`Tx: <code>${escapeHtml(result.hash)}</code>`);
+  }
+  if (result.url) {
+    lines.push(`<a href="${escapeHtml(result.url)}">View on Arc explorer</a>`);
+  }
+  return lines.join("\n");
 }
 
 function refuse(detail) {

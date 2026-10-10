@@ -4,6 +4,7 @@ import { handleCreate } from "./createCommand.js";
 import { handleAlerts, handleUnwatch, handleWatch } from "./alerts.js";
 import { readState } from "./state.js";
 import { executeSwap, knownTokenSymbols } from "./swap.js";
+import { bridgeChain, bridgeDestinations, bridgeSources, quoteBridge, runBridge } from "./arcKit.js";
 import {
   answerCallbackQuery,
   btn,
@@ -14,13 +15,28 @@ import {
   sendMessage,
 } from "./telegram.js";
 import {
+  ARC_CHAIN_ID,
   SOLANA_SENTINEL_CHAIN_ID,
   chainIdNumber,
+  hasWalletSession,
+  isEvmAddress,
+  walletSessionInfo,
   looksLikeSecretMaterial,
   sanitizeWallet,
 } from "./wallet.js";
 
 const AMOUNT_PRESETS = ["10", "50", "100", "250"];
+const BRIDGE_PRESETS = ["10", "50", "100", "250"];
+const ARC_TOKENS = ["USDC", "EURC", "cirBTC"];
+const ARC_BTC_PRESETS = ["0.0005", "0.001", "0.005", "0.01"];
+const SOON = {
+  onramp: "Buy USDC with card is coming soon.",
+  earn: "Earn on USDC and EURC is coming soon.",
+  borrow: "Borrow USDC against cirBTC is coming soon.",
+  ub: "One USDC balance across chains is coming soon.",
+};
+/** @type {Set<string>} */
+const bridgesInFlight = new Set();
 const GOAL_PRESETS = ["10", "25", "40", "50"];
 const PROMPT_MS = 15 * 60 * 1000;
 
@@ -83,6 +99,7 @@ function navRow() {
 function homeKeyboard() {
   return inlineKeyboard([
     [btn("🔄 Swap", "ui:swap"), btn("📋 Copy trade", "ui:copy")],
+    [btn("🌉 Bridge USDC", "ui:bridge"), btn("🟣 Arc", "ui:arc")],
     [btn("🔔 Price alerts", "ui:alerts"), btn("👀 Watchlist", "ui:watchlist")],
     [btn("🔗 Connect wallet", "ui:connect"), btn("🆕 Create wallet", "ui:create")],
     [btn("🎯 Goal", "ui:goal"), btn("⚖️ Risk", "ui:risk")],
@@ -183,6 +200,23 @@ async function routeUi(chatId, action, args, ctx) {
       return;
     case "sw":
       await handleSwapAction(chatId, args, ctx);
+      return;
+    case "bridge":
+      await answerCallbackQuery(ctx.callbackId);
+      await openBridge(chatId, ctx.messageId, {});
+      return;
+    case "bg":
+      await handleBridgeAction(chatId, args, ctx);
+      return;
+    case "arc":
+      await answerCallbackQuery(ctx.callbackId);
+      await openArc(chatId, ctx.messageId);
+      return;
+    case "as":
+      await handleArcSwapAction(chatId, args, ctx);
+      return;
+    case "soon":
+      await answerCallbackQuery(ctx.callbackId, SOON[args[0]] || "Coming soon.");
       return;
     case "copy":
       await answerCallbackQuery(ctx.callbackId);
@@ -535,6 +569,499 @@ async function showConfirmStep(chatId, draft, messageId) {
     ]),
     { messageId },
   );
+}
+
+// ---------- Bridge USDC (Circle Bridge Kit) ----------
+
+function bridgeBack() {
+  return [btn("⬅️ Back", "ui:bridge"), btn("🏠 Home", "ui:home")];
+}
+
+function chainButtons(chains, prefix, star = ARC_CHAIN_ID) {
+  const rows = [];
+  for (let i = 0; i < chains.length; i += 2) {
+    rows.push(chains.slice(i, i + 2).map((c) => btn(c.id === star ? `⭐ ${c.label}` : c.label, `${prefix}${c.id}`)));
+  }
+  return rows;
+}
+
+async function bridgeWalletGate(chatId, messageId, title) {
+  const wallet = await connectedWallet(chatId);
+  if (!wallet || !isEvmAddress(wallet.address)) {
+    await showScreen(
+      chatId,
+      `<b>${title}</b>\nConnect an EVM wallet first. You sign every step in your own wallet.`,
+      inlineKeyboard([[btn("🔗 Connect wallet", "ui:connect")], navRow()]),
+      { messageId },
+    );
+    return null;
+  }
+  if (!hasWalletSession(chatId)) {
+    await showScreen(
+      chatId,
+      `<b>${title}</b>\nYour wallet link has expired. Tap Connect wallet to pair again.`,
+      inlineKeyboard([[btn("🔗 Connect wallet", "ui:connect")], navRow()]),
+      { messageId },
+    );
+    return null;
+  }
+  return wallet;
+}
+
+async function openBridge(chatId, messageId, draft = {}) {
+  clearUiPrompt(chatId);
+  const wallet = await bridgeWalletGate(chatId, messageId, "Bridge USDC");
+  if (!wallet) {
+    return;
+  }
+  const { info, chains } = await bridgeSources(chatId);
+  if (!info || chains.length === 0) {
+    await showScreen(
+      chatId,
+      [
+        "<b>Bridge USDC</b>",
+        "Your wallet did not share a chain BLARC can bridge from.",
+        "Supported: Arc, Base, Ethereum, Arbitrum, Optimism, Polygon.",
+        "Add one in your wallet, then connect again.",
+      ].join("\n"),
+      inlineKeyboard([[btn("🔗 Connect wallet", "ui:connect")], navRow()]),
+      { messageId },
+    );
+    return;
+  }
+  setPrompt(chatId, "bridge_draft", { ...draft, address: info.address });
+  await showScreen(
+    chatId,
+    [
+      "<b>Bridge USDC</b>",
+      `Wallet: <code>${escapeHtml(info.address)}</code>`,
+      draft.dst ? `To: <b>${escapeHtml(bridgeChain(draft.dst)?.label || "")}</b>` : "",
+      "",
+      "Move USDC between chains with Circle. Fast, and it lands in your own wallet.",
+      "",
+      "<b>From which chain?</b>",
+    ].filter((line, i) => line !== "" || i > 2).join("\n"),
+    inlineKeyboard([...chainButtons(chains, "ui:bg:src:"), navRow()]),
+    { messageId },
+  );
+}
+
+function bridgeDraft(chatId) {
+  const prompt = peekPrompt(chatId);
+  return prompt && (prompt.kind === "bridge_draft" || prompt.kind === "bridge_amount") ? { ...(prompt.draft || {}) } : null;
+}
+
+async function showBridgeDestinations(chatId, draft, messageId) {
+  setPrompt(chatId, "bridge_draft", draft);
+  const source = bridgeChain(draft.src);
+  const destinations = bridgeDestinations(draft.src);
+  await showScreen(
+    chatId,
+    [
+      "<b>Bridge USDC</b>",
+      `From: <b>${escapeHtml(source?.label || "")}</b>`,
+      "",
+      "<b>To which chain?</b>",
+    ].join("\n"),
+    inlineKeyboard([...chainButtons(destinations, "ui:bg:dst:"), bridgeBack()]),
+    { messageId },
+  );
+}
+
+async function showBridgeAmounts(chatId, draft, messageId) {
+  setPrompt(chatId, "bridge_draft", draft);
+  await showScreen(
+    chatId,
+    [
+      "<b>Bridge USDC</b>",
+      `From: <b>${escapeHtml(bridgeChain(draft.src)?.label || "")}</b> → To: <b>${escapeHtml(bridgeChain(draft.dst)?.label || "")}</b>`,
+      "",
+      "<b>How much USDC?</b>",
+    ].join("\n"),
+    inlineKeyboard([
+      BRIDGE_PRESETS.slice(0, 2).map((a) => btn(`${a} USDC`, `ui:bg:amt:${a}`)),
+      BRIDGE_PRESETS.slice(2).map((a) => btn(`${a} USDC`, `ui:bg:amt:${a}`)),
+      [btn("✏️ Custom amount", "ui:bg:amt:custom")],
+      bridgeBack(),
+    ]),
+    { messageId },
+  );
+}
+
+async function showBridgeConfirm(chatId, draft, messageId) {
+  setPrompt(chatId, "bridge_draft", draft);
+  const source = bridgeChain(draft.src);
+  const destination = bridgeChain(draft.dst);
+  await showScreen(
+    chatId,
+    `<b>Bridge USDC</b>\nGetting a quote for ${escapeHtml(draft.amount)} USDC…`,
+    inlineKeyboard([bridgeBack()]),
+    { messageId },
+  );
+  const quote = await quoteBridge({
+    chatId,
+    address: draft.address,
+    sourceId: draft.src,
+    destinationId: draft.dst,
+    amount: draft.amount,
+  });
+  if (quote.error) {
+    await showScreen(
+      chatId,
+      `<b>Bridge USDC</b>\n${escapeHtml(quote.error)} Nothing was signed.`,
+      inlineKeyboard([[btn("🔁 Try again", "ui:bridge")], navRow()]),
+      { messageId },
+    );
+    return;
+  }
+  await showScreen(
+    chatId,
+    [
+      "<b>Confirm bridge</b>",
+      `Wallet: <code>${escapeHtml(draft.address)}</code>`,
+      `From: <b>${escapeHtml(source.label)}</b>`,
+      `To: <b>${escapeHtml(destination.label)}</b> (same wallet)`,
+      `Send: <b>${escapeHtml(quote.amount)} USDC</b>`,
+      `Arrives: <b>~${escapeHtml(quote.arrive)} USDC</b>`,
+      "",
+      `Your wallet asks twice on ${escapeHtml(source.label)}: approve, then bridge. Circle delivers on ${escapeHtml(destination.label)} for you.`,
+      source.id === ARC_CHAIN_ID ? "Gas on Arc is paid in USDC." : "",
+    ].filter(Boolean).join("\n"),
+    inlineKeyboard([
+      [btn("✅ Confirm", "ui:bg:go"), btn("❌ Cancel", "ui:bg:cancel")],
+      bridgeBack(),
+    ]),
+    { messageId },
+  );
+}
+
+async function handleBridgeAction(chatId, args, ctx) {
+  const step = args[0] || "";
+  const value = args.slice(1).join(":");
+  if (step === "toarc") {
+    await answerCallbackQuery(ctx.callbackId);
+    await openBridge(chatId, ctx.messageId, { dst: ARC_CHAIN_ID });
+    return;
+  }
+  if (step === "cancel") {
+    await answerCallbackQuery(ctx.callbackId, "Cancelled");
+    clearUiPrompt(chatId);
+    await showHome(chatId, { messageId: ctx.messageId, name: ctx.from?.first_name });
+    return;
+  }
+  const draft = bridgeDraft(chatId);
+  if (!draft?.address) {
+    await answerCallbackQuery(ctx.callbackId, "Start the bridge again");
+    await openBridge(chatId, ctx.messageId, {});
+    return;
+  }
+  if (step === "src" && bridgeChain(value)) {
+    await answerCallbackQuery(ctx.callbackId);
+    const next = { ...draft, src: Number(value) };
+    if (next.dst && next.dst !== next.src && bridgeDestinations(next.src).some((c) => c.id === next.dst)) {
+      await showBridgeAmounts(chatId, next, ctx.messageId);
+    } else {
+      delete next.dst;
+      await showBridgeDestinations(chatId, next, ctx.messageId);
+    }
+    return;
+  }
+  if (step === "dst" && bridgeChain(value) && draft.src) {
+    await answerCallbackQuery(ctx.callbackId);
+    await showBridgeAmounts(chatId, { ...draft, dst: Number(value) }, ctx.messageId);
+    return;
+  }
+  if (step === "amt" && value === "custom" && draft.src && draft.dst) {
+    await answerCallbackQuery(ctx.callbackId);
+    setPrompt(chatId, "bridge_amount", draft);
+    await showScreen(
+      chatId,
+      "<b>Bridge USDC</b>\nSend the USDC amount as a number, like <code>25</code>.",
+      inlineKeyboard([bridgeBack()]),
+      { messageId: ctx.messageId },
+    );
+    return;
+  }
+  if (step === "amt" && value && draft.src && draft.dst) {
+    await answerCallbackQuery(ctx.callbackId, "Getting a quote…");
+    await showBridgeConfirm(chatId, { ...draft, amount: value }, ctx.messageId);
+    return;
+  }
+  if (step === "go" && draft.src && draft.dst && draft.amount) {
+    const key = String(chatId);
+    if (bridgesInFlight.has(key)) {
+      await answerCallbackQuery(ctx.callbackId, "A bridge is already running");
+      return;
+    }
+    await answerCallbackQuery(ctx.callbackId, "Check your wallet…");
+    clearUiPrompt(chatId);
+    const source = bridgeChain(draft.src);
+    const destination = bridgeChain(draft.dst);
+    await showScreen(
+      chatId,
+      [
+        "<b>Bridge USDC</b>",
+        `Open your wallet and approve on ${escapeHtml(source.label)}.`,
+        `${escapeHtml(draft.amount)} USDC → ${escapeHtml(destination.label)}`,
+        "Your wallet will ask twice: approve, then bridge.",
+      ].join("\n"),
+      inlineKeyboard([navRow()]),
+      { messageId: ctx.messageId },
+    );
+    bridgesInFlight.add(key);
+    // The bridge waits on Circle's attestation and forwarder, so it runs off the update loop.
+    runBridgeInBackground(chatId, draft).finally(() => bridgesInFlight.delete(key));
+    return;
+  }
+  await answerCallbackQuery(ctx.callbackId);
+  await openBridge(chatId, ctx.messageId, {});
+}
+
+async function runBridgeInBackground(chatId, draft) {
+  let announcedBurn = false;
+  try {
+    const result = await runBridge({
+      chatId,
+      address: draft.address,
+      sourceId: draft.src,
+      destinationId: draft.dst,
+      amount: draft.amount,
+      onProgress: async ({ name, hash, source, destination }) => {
+        if (!announcedBurn && /burn/i.test(name) && hash) {
+          announcedBurn = true;
+          await sendMessage(
+            chatId,
+            [
+              `🌉 <b>Bridge sent from ${escapeHtml(source.label)}</b>`,
+              `Tx: <code>${escapeHtml(hash)}</code>`,
+              `Circle is delivering your USDC on ${escapeHtml(destination.label)}. This usually takes under a few minutes.`,
+            ].join("\n"),
+          );
+        }
+      },
+    });
+    await sendMessage(chatId, bridgeResultText(result), { reply_markup: homeKeyboard() });
+  } catch (error) {
+    console.error("bridge run failed:", String(error?.message || "error").slice(0, 120));
+    await sendMessage(chatId, "Bridge stopped. Nothing further was sent. Tap Home to try again.", {
+      reply_markup: homeKeyboard(),
+    }).catch(() => {});
+  }
+}
+
+function bridgeResultText(result) {
+  if (result.text) {
+    return escapeHtml(result.text);
+  }
+  const route = `${escapeHtml(result.source.label)} → ${escapeHtml(result.destination.label)}`;
+  if (result.ok) {
+    return [
+      "✅ <b>Bridge complete</b>",
+      `${escapeHtml(result.amount)} USDC · ${route}`,
+      result.burnUrl ? `<a href="${escapeHtml(result.burnUrl)}">Source tx</a>` : "",
+      result.mintUrl ? `<a href="${escapeHtml(result.mintUrl)}">Delivery tx</a>` : "",
+      "Funds are in your own wallet.",
+    ].filter(Boolean).join("\n");
+  }
+  if (result.burnHash) {
+    return [
+      "⏳ <b>Bridge sent, delivery still pending</b>",
+      `${escapeHtml(result.amount)} USDC · ${route}`,
+      `Source tx: <code>${escapeHtml(result.burnHash)}</code>`,
+      "Your USDC is safe in Circle's transfer. It is delivered to your wallet once Circle finishes. If it has not arrived in 30 minutes, share the source tx with support.",
+    ].join("\n");
+  }
+  return [
+    "Bridge not completed.",
+    result.failedReason ? escapeHtml(result.failedReason) : "",
+    "Nothing was bridged. If you approved first, that approval only covers this amount.",
+  ].filter(Boolean).join("\n");
+}
+
+// ---------- Arc hub + Arc swap (Circle Swap Kit) ----------
+
+async function openArc(chatId, messageId) {
+  clearUiPrompt(chatId);
+  await showScreen(
+    chatId,
+    [
+      "<b>🟣 Arc</b>",
+      "Circle's stablecoin chain. USDC pays the gas, and trades settle in under a second.",
+      "",
+      "• Swap USDC, EURC and cirBTC",
+      "• Bridge USDC in from Base, Ethereum, Arbitrum and more",
+      "",
+      "Powered by Circle App Kits. You sign every step.",
+    ].join("\n"),
+    inlineKeyboard([
+      [btn("💱 Swap on Arc", "ui:as:open"), btn("🌉 Bridge to Arc", "ui:bg:toarc")],
+      [btn("💳 Buy USDC · soon", "ui:soon:onramp"), btn("📈 Earn · soon", "ui:soon:earn")],
+      [btn("🏦 Borrow · soon", "ui:soon:borrow"), btn("🧮 One balance · soon", "ui:soon:ub")],
+      navRow(),
+    ]),
+    { messageId },
+  );
+}
+
+function arcBack() {
+  return [btn("⬅️ Back", "ui:arc"), btn("🏠 Home", "ui:home")];
+}
+
+function arcSwapDraft(chatId) {
+  const prompt = peekPrompt(chatId);
+  return prompt && (prompt.kind === "arcswap_draft" || prompt.kind === "arcswap_amount") ? { ...(prompt.draft || {}) } : {};
+}
+
+async function openArcSwap(chatId, messageId) {
+  clearUiPrompt(chatId);
+  const wallet = await bridgeWalletGate(chatId, messageId, "Swap on Arc");
+  if (!wallet) {
+    return;
+  }
+  const info = await walletSessionInfo(chatId);
+  if (!info?.chainIds?.has(ARC_CHAIN_ID)) {
+    await showScreen(
+      chatId,
+      [
+        "<b>Swap on Arc</b>",
+        "Your wallet did not share Arc yet.",
+        "Add Arc in your wallet: chain id <code>5042</code>, RPC <code>https://rpc.mainnet.arc.io</code>, gas coin USDC. Then connect again.",
+        "",
+        "No USDC on Arc yet? Bridge some in first.",
+      ].join("\n"),
+      inlineKeyboard([[btn("🌉 Bridge to Arc", "ui:bg:toarc"), btn("🔗 Connect wallet", "ui:connect")], arcBack()]),
+      { messageId },
+    );
+    return;
+  }
+  setPrompt(chatId, "arcswap_draft", { address: info.address });
+  await showScreen(
+    chatId,
+    [
+      "<b>Swap on Arc</b>",
+      `Wallet: <code>${escapeHtml(info.address)}</code>`,
+      "",
+      "What are you selling?",
+    ].join("\n"),
+    inlineKeyboard([ARC_TOKENS.map((t) => btn(t, `ui:as:sell:${t}`)), arcBack()]),
+    { messageId },
+  );
+}
+
+async function showArcSwapConfirm(chatId, draft, messageId) {
+  setPrompt(chatId, "arcswap_draft", draft);
+  await showScreen(
+    chatId,
+    [
+      "<b>Confirm swap · Arc</b>",
+      `Wallet: <code>${escapeHtml(draft.address)}</code>`,
+      `Sell: <b>${escapeHtml(draft.amount)} ${escapeHtml(draft.sell)}</b>`,
+      `Buy: <b>${escapeHtml(draft.buy)}</b>`,
+      "",
+      "Your wallet asks to sign a permit, then the swap. Tap Confirm to continue.",
+    ].join("\n"),
+    inlineKeyboard([[btn("✅ Confirm", "ui:as:go"), btn("❌ Cancel", "ui:as:cancel")], arcBack()]),
+    { messageId },
+  );
+}
+
+async function handleArcSwapAction(chatId, args, ctx) {
+  const step = args[0] || "";
+  const value = args.slice(1).join(":");
+  if (step === "open") {
+    await answerCallbackQuery(ctx.callbackId);
+    await openArcSwap(chatId, ctx.messageId);
+    return;
+  }
+  if (step === "cancel") {
+    await answerCallbackQuery(ctx.callbackId, "Cancelled");
+    clearUiPrompt(chatId);
+    await openArc(chatId, ctx.messageId);
+    return;
+  }
+  const draft = arcSwapDraft(chatId);
+  if (!draft.address) {
+    await answerCallbackQuery(ctx.callbackId, "Start the swap again");
+    await openArcSwap(chatId, ctx.messageId);
+    return;
+  }
+  if (step === "sell" && ARC_TOKENS.includes(value)) {
+    await answerCallbackQuery(ctx.callbackId);
+    const next = { address: draft.address, sell: value };
+    setPrompt(chatId, "arcswap_draft", next);
+    await showScreen(
+      chatId,
+      ["<b>Swap on Arc</b>", `Selling: <b>${escapeHtml(value)}</b>`, "", "What do you want to buy?"].join("\n"),
+      inlineKeyboard([ARC_TOKENS.filter((t) => t !== value).map((t) => btn(t, `ui:as:buy:${t}`)), [btn("⬅️ Back", "ui:as:open"), btn("🏠 Home", "ui:home")]]),
+      { messageId: ctx.messageId },
+    );
+    return;
+  }
+  if (step === "buy" && ARC_TOKENS.includes(value) && draft.sell && value !== draft.sell) {
+    await answerCallbackQuery(ctx.callbackId);
+    const next = { ...draft, buy: value };
+    setPrompt(chatId, "arcswap_draft", next);
+    const presets = draft.sell === "cirBTC" ? ARC_BTC_PRESETS : AMOUNT_PRESETS;
+    await showScreen(
+      chatId,
+      ["<b>Swap on Arc</b>", `Sell: <b>${escapeHtml(draft.sell)}</b>`, `Buy: <b>${escapeHtml(value)}</b>`, "", `How much ${escapeHtml(draft.sell)}?`].join("\n"),
+      inlineKeyboard([
+        presets.slice(0, 2).map((a) => btn(a, `ui:as:amt:${a}`)),
+        presets.slice(2).map((a) => btn(a, `ui:as:amt:${a}`)),
+        [btn("✏️ Custom amount", "ui:as:amt:custom")],
+        [btn("⬅️ Back", "ui:as:open"), btn("🏠 Home", "ui:home")],
+      ]),
+      { messageId: ctx.messageId },
+    );
+    return;
+  }
+  if (step === "amt" && value === "custom" && draft.sell && draft.buy) {
+    await answerCallbackQuery(ctx.callbackId);
+    setPrompt(chatId, "arcswap_amount", draft);
+    await showScreen(
+      chatId,
+      `<b>Swap on Arc</b>\nSend the ${escapeHtml(draft.sell)} amount as a number.`,
+      inlineKeyboard([arcBack()]),
+      { messageId: ctx.messageId },
+    );
+    return;
+  }
+  if (step === "amt" && value && draft.sell && draft.buy) {
+    await answerCallbackQuery(ctx.callbackId);
+    await showArcSwapConfirm(chatId, { ...draft, amount: value }, ctx.messageId);
+    return;
+  }
+  if (step === "go" && draft.sell && draft.buy && draft.amount) {
+    await answerCallbackQuery(ctx.callbackId, "Check your wallet…");
+    clearUiPrompt(chatId);
+    const wallet = await connectedWallet(chatId);
+    if (!wallet) {
+      await openArcSwap(chatId, ctx.messageId);
+      return;
+    }
+    await showScreen(
+      chatId,
+      [
+        "<b>Swap on Arc</b>",
+        "Asking your wallet to sign…",
+        `Sell: <b>${escapeHtml(draft.amount)} ${escapeHtml(draft.sell)}</b>`,
+        `Buy: <b>${escapeHtml(draft.buy)}</b>`,
+      ].join("\n"),
+      inlineKeyboard([navRow()]),
+      { messageId: ctx.messageId },
+    );
+    const reply = await executeSwap({
+      chatId,
+      wallet: { ...wallet, address: draft.address, chainId: `eip155:${ARC_CHAIN_ID}` },
+      amount: draft.amount,
+      tokenIn: draft.sell,
+      tokenOut: draft.buy,
+    });
+    await sendMessage(chatId, reply, { reply_markup: homeKeyboard() });
+    return;
+  }
+  await answerCallbackQuery(ctx.callbackId);
+  await openArcSwap(chatId, ctx.messageId);
 }
 
 async function openCopy(chatId, messageId) {
@@ -922,6 +1449,8 @@ async function openGuide(chatId, messageId) {
     [
       "<b>Guide</b>",
       "• Swap — quick trade, you sign",
+      "• Bridge USDC — move USDC between chains with Circle",
+      "• Arc — swap USDC, EURC and cirBTC on Arc",
       "• Copy trade — follow a public wallet",
       "• Price alerts — one ping at your target",
       "• Connect — pair your own wallet",
@@ -969,6 +1498,7 @@ async function openAbout(chatId, messageId) {
       "Create can show a new seed once after you confirm. It is not stored.",
       "A swap includes a 1% fee inside the transaction you sign. Otherwise nothing is sent. Trades do not repeat this.",
       "Copy watches a public wallet. Auto still asks you to sign.",
+      "Bridge USDC and Arc swaps run on Circle App Kits. The same 1% is included inside the bridge or swap you sign.",
       "",
       "Ask /fee for the public fee wallet.",
     ].join("\n"),
@@ -1062,6 +1592,21 @@ export async function handleUiText(message) {
     await showConfirmStep(chatId, draft, screenMessageIds.get(String(chatId)));
     return true;
   }
+  if (prompt.kind === "bridge_amount" || prompt.kind === "arcswap_amount") {
+    const amount = text.replaceAll(",", "").replace(/^\$/, "");
+    if (!/^\d+(\.\d+)?$/.test(amount) || Number(amount) <= 0) {
+      await sendMessage(chatId, "Send a positive number, like <code>25</code>.");
+      return true;
+    }
+    const draft = { ...(prompt.draft || {}), amount };
+    takePrompt(chatId);
+    if (prompt.kind === "bridge_amount") {
+      await showBridgeConfirm(chatId, draft, screenMessageIds.get(String(chatId)));
+    } else {
+      await showArcSwapConfirm(chatId, draft, screenMessageIds.get(String(chatId)));
+    }
+    return true;
+  }
   if (prompt.kind === "copy_wallet") {
     takePrompt(chatId);
     await handleCopy(message, [text]);
@@ -1138,6 +1683,12 @@ export async function openFeatureFromCommand(name, message, args) {
       return true;
     case "help":
       await openGuide(chatId);
+      return true;
+    case "bridge":
+      await openBridge(chatId, undefined, {});
+      return true;
+    case "arc":
+      await openArc(chatId);
       return true;
     case "swap":
       if (args?.length) {

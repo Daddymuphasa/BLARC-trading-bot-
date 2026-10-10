@@ -14,6 +14,8 @@ const commands = [
   { command: "start", description: "Open the home menu" },
   { command: "help", description: "Short guide and tips" },
   { command: "swap", description: "Quick swap (you sign)" },
+  { command: "bridge", description: "Bridge USDC between chains" },
+  { command: "arc", description: "Arc: swap USDC, EURC, cirBTC" },
   { command: "copy", description: "Follow a trader wallet" },
   { command: "copies", description: "Your copy watches" },
   { command: "watch", description: "Set a price alert" },
