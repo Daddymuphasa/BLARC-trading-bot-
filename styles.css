@@ -899,6 +899,116 @@ h3 {
   }
 }
 
+/* ARC identity */
+.brand > span {
+  display: grid;
+  line-height: 1;
+}
+
+.brand small {
+  color: var(--amber);
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin-top: 0.32rem;
+  text-transform: uppercase;
+}
+
+.hero h1 > span {
+  color: var(--amber);
+  display: block;
+}
+
+.marquee .arc-chain {
+  background: var(--amber);
+  border-radius: 0.3rem;
+  color: #071014;
+  font-weight: 900;
+  padding: 0.45rem 0.7rem;
+}
+
+.arc-focus {
+  align-items: center;
+  background:
+    linear-gradient(110deg, rgba(255, 200, 87, 0.12), transparent 48%),
+    rgba(5, 13, 18, 0.74);
+  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: clamp(2rem, 5vw, 4rem);
+  grid-template-columns: minmax(9rem, 0.55fr) minmax(18rem, 1.15fr) minmax(16rem, 0.9fr);
+  max-width: none;
+  padding-inline: max(1.5rem, calc((100vw - 1200px) / 2));
+}
+
+.arc-mark {
+  color: var(--amber);
+  font-size: clamp(4.5rem, 10vw, 9rem);
+  font-weight: 900;
+  line-height: 0.8;
+}
+
+.arc-copy h2 {
+  margin-bottom: 1rem;
+}
+
+.arc-values {
+  border-left: 1px solid var(--line);
+  display: grid;
+  gap: 1.25rem;
+  padding-left: clamp(1.5rem, 4vw, 3rem);
+}
+
+.arc-values div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.arc-values strong {
+  color: var(--text);
+  font-size: 0.96rem;
+}
+
+.arc-values span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .arc-focus {
+    grid-template-columns: 1fr 2fr;
+  }
+
+  .arc-values {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, 1fr);
+    padding-left: 0;
+    padding-top: 1.5rem;
+  }
+}
+
+@media (max-width: 620px) {
+  .brand small {
+    display: none;
+  }
+
+  .arc-focus {
+    grid-template-columns: 1fr;
+  }
+
+  .arc-mark {
+    font-size: 4.75rem;
+  }
+
+  .arc-values {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+  }
+}
+
 /* blarc.tech refresh */
 code {
   background: rgba(255, 255, 255, 0.08);
@@ -1246,4 +1356,12 @@ h1 {
 
 @media (prefers-reduced-motion: reduce) {
   [data-reveal] { opacity: 1; transform: none; }
+}
+
+/* Keep ARC visually primary after the general refresh rules above. */
+.marquee span.arc-chain {
+  -webkit-background-clip: border-box;
+  background: var(--amber);
+  background-clip: border-box;
+  color: #071014;
 }

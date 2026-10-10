@@ -8,10 +8,10 @@
       content="default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
     />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
-    <title>BLARC | Tap-to-trade crypto in Telegram</title>
+    <title>BLARC | ARC-native trading in Telegram</title>
     <meta
       name="description"
-      content="BLARC is a non-custodial Telegram trading bot. Tap to swap on Solana, Robinhood Chain, and EVM, copy trades, set price alerts, and scan tokens. You sign every trade in your own wallet."
+      content="BLARC is the ARC-native, non-custodial trading bot for Telegram. Swap on ARC, copy trades, set alerts, scan tokens, and sign every trade in your own wallet."
     />
     <link rel="canonical" href="https://blarc.tech/" />
     <meta name="theme-color" content="#08111a" />
@@ -19,10 +19,10 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="BLARC" />
     <meta property="og:url" content="https://blarc.tech/" />
-    <meta property="og:title" content="BLARC | Tap-to-trade crypto in Telegram" />
+    <meta property="og:title" content="BLARC | ARC-native trading in Telegram" />
     <meta
       property="og:description"
-      content="Quick swaps, copy trading, price alerts, and token scans in Telegram. Non-custodial: you sign every trade."
+      content="The ARC-native trading experience for Telegram. Quick swaps, copy trading, alerts, and token scans with every trade signed by you."
     />
     <meta property="og:image" content="https://blarc.tech/assets/og-card.jpg" />
     <meta property="og:image:width" content="1200" />
@@ -31,25 +31,26 @@
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@blARCthedawg" />
-    <meta name="twitter:title" content="BLARC | Tap-to-trade crypto in Telegram" />
+    <meta name="twitter:title" content="BLARC | ARC-native trading in Telegram" />
     <meta
       name="twitter:description"
-      content="Quick swaps, copy trading, price alerts, and token scans in Telegram. You sign every trade."
+      content="The ARC-native trading experience for Telegram. You stay in control and sign every trade."
     />
     <meta name="twitter:image" content="https://blarc.tech/assets/og-card.jpg" />
 
     <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192.png" />
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=20261010-1" />
+    <link rel="stylesheet" href="styles.css?v=20261010-2" />
   </head>
   <body>
     <header class="site-header" data-elevated="false">
       <a class="brand" href="#top" aria-label="BLARC home">
         <img src="assets/favicon-192.png" alt="" />
-        <span>BLARC</span>
+        <span>BLARC <small>ARC native</small></span>
       </a>
       <nav class="nav-links" aria-label="Primary navigation">
+        <a href="#arc">ARC</a>
         <a href="#features">Features</a>
         <a href="#how">How it works</a>
         <a href="#security">Security</a>
@@ -62,20 +63,20 @@
     <main id="top">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow">Live on Telegram</p>
-          <h1 id="hero-title">Tap to trade. You sign.</h1>
+          <p class="eyebrow">Built on ARC · Live on Telegram</p>
+          <h1 id="hero-title"><span>ARC-native</span> trading. You sign.</h1>
           <p class="hero-text">
-            BLARC puts quick swaps, copy trading, price alerts, and token scans behind a few taps in
-            Telegram. Your keys stay in your wallet, and every trade waits for your signature.
+            BLARC is the Telegram trading layer built around ARC. Swap, copy trades, set alerts, and
+            scan tokens in a few taps while your keys stay in your wallet.
           </p>
           <div class="hero-actions">
             <a class="button primary" href="https://t.me/theBLARCbot" rel="noopener">Open @theBLARCbot</a>
             <a class="button secondary" href="https://x.com/blARCthedawg" rel="noopener">Follow on X</a>
           </div>
           <ul class="hero-points" aria-label="Highlights">
-            <li>Non-custodial</li>
+            <li>ARC at the core</li>
             <li>Button-first menu</li>
-            <li>Solana, Robinhood Chain, EVM</li>
+            <li>Multi-chain reach</li>
           </ul>
         </div>
         <div class="hero-visual" aria-label="BLARC mascot and bot menu preview">
@@ -95,9 +96,9 @@
 
       <section class="chain-strip" aria-label="Supported chains">
         <div class="marquee">
+          <span class="arc-chain">ARC · HOME NETWORK</span>
           <span>Solana</span>
           <span>Robinhood Chain</span>
-          <span>Arc</span>
           <span>Ethereum</span>
           <span>Base</span>
           <span>Arbitrum</span>
@@ -105,9 +106,9 @@
           <span>Optimism</span>
           <span>Polygon</span>
           <span>Avalanche</span>
+          <span class="arc-chain">ARC · HOME NETWORK</span>
           <span>Solana</span>
           <span>Robinhood Chain</span>
-          <span>Arc</span>
           <span>Ethereum</span>
           <span>Base</span>
           <span>Arbitrum</span>
@@ -115,6 +116,24 @@
           <span>Optimism</span>
           <span>Polygon</span>
           <span>Avalanche</span>
+        </div>
+      </section>
+
+      <section class="section arc-focus" id="arc" aria-labelledby="arc-title">
+        <div class="arc-mark" aria-hidden="true">ARC</div>
+        <div class="arc-copy">
+          <p class="eyebrow">The home network</p>
+          <h2 id="arc-title">BLARC starts with ARC.</h2>
+          <p>
+            ARC is not another chain in a long list. It is the project at the center of BLARC's
+            identity, product direction, and community. Multi-chain routes extend the experience;
+            ARC remains home.
+          </p>
+        </div>
+        <div class="arc-values" aria-label="BLARC's ARC focus">
+          <div><strong>ARC first</strong><span>Designed around the ARC ecosystem.</span></div>
+          <div><strong>Telegram native</strong><span>Clear, tappable trading flows.</span></div>
+          <div><strong>Self-custody</strong><span>Your wallet. Your final signature.</span></div>
         </div>
       </section>
 
@@ -170,7 +189,7 @@
           <article>
             <span>01</span>
             <h3>Quick swaps</h3>
-            <p>Swap on Solana, Robinhood Chain, and other EVM chains. Tap the tokens and amount, then sign.</p>
+            <p>Trade on ARC first, with routes to Solana, Robinhood Chain, and supported EVM networks.</p>
           </article>
           <article>
             <span>02</span>
@@ -299,7 +318,7 @@
             </div>
             <button aria-expanded="false">Which chains can I swap on?</button>
             <div hidden>
-              <p>Solana, Robinhood Chain, and a set of EVM chains including Ethereum, Base, Arbitrum, BNB Chain, Optimism, Polygon, and Avalanche.</p>
+              <p>ARC is BLARC's home network. Multi-chain routes also extend to Solana, Robinhood Chain, Ethereum, Base, Arbitrum, BNB Chain, Optimism, Polygon, and Avalanche.</p>
             </div>
             <button aria-expanded="false">Does auto mode trade without me?</button>
             <div hidden>
