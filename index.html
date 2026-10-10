@@ -8,10 +8,10 @@
       content="default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
     />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
-    <title>BLARC | ARC-native trading in Telegram</title>
+    <title>BLARC | Smarter trading in Telegram</title>
     <meta
       name="description"
-      content="BLARC is the ARC-native, non-custodial trading bot for Telegram. Swap on ARC, copy trades, set alerts, scan tokens, and sign every trade in your own wallet."
+      content="BLARC is a non-custodial trading bot built on ARC. Swap, copy trades, set alerts, scan tokens, and sign every trade in your own wallet."
     />
     <link rel="canonical" href="https://blarc.tech/" />
     <meta name="theme-color" content="#08111a" />
@@ -19,10 +19,10 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="BLARC" />
     <meta property="og:url" content="https://blarc.tech/" />
-    <meta property="og:title" content="BLARC | ARC-native trading in Telegram" />
+    <meta property="og:title" content="BLARC | Smarter trading in Telegram" />
     <meta
       property="og:description"
-      content="The ARC-native trading experience for Telegram. Quick swaps, copy trading, alerts, and token scans with every trade signed by you."
+      content="Fast trading tools and upcoming AI-assisted strategies in Telegram, with every trade signed by you."
     />
     <meta property="og:image" content="https://blarc.tech/assets/og-card.jpg" />
     <meta property="og:image:width" content="1200" />
@@ -31,26 +31,25 @@
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@blARCthedawg" />
-    <meta name="twitter:title" content="BLARC | ARC-native trading in Telegram" />
+    <meta name="twitter:title" content="BLARC | Smarter trading in Telegram" />
     <meta
       name="twitter:description"
-      content="The ARC-native trading experience for Telegram. You stay in control and sign every trade."
+      content="Fast trading tools and upcoming AI-assisted strategies in Telegram. You stay in control."
     />
     <meta name="twitter:image" content="https://blarc.tech/assets/og-card.jpg" />
 
     <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192.png" />
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=20261010-2" />
+    <link rel="stylesheet" href="styles.css?v=20261010-3" />
   </head>
   <body>
     <header class="site-header" data-elevated="false">
       <a class="brand" href="#top" aria-label="BLARC home">
         <img src="assets/favicon-192.png" alt="" />
-        <span>BLARC <small>ARC native</small></span>
+          <span>BLARC <small>Built on ARC</small></span>
       </a>
       <nav class="nav-links" aria-label="Primary navigation">
-        <a href="#arc">ARC</a>
         <a href="#v2">V2 AI</a>
         <a href="#features">Features</a>
         <a href="#how">How it works</a>
@@ -64,24 +63,26 @@
     <main id="top">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow">Built for ARC. Live on Telegram.</p>
-          <h1 id="hero-title">ARC-native trading.<span>Trade profitably.</span></h1>
+          <p class="eyebrow">Built on ARC · Live on Telegram</p>
+          <h1 id="hero-title">Trade smarter.<span>You stay in control.</span></h1>
           <p class="hero-text">
-            BLARC is the Telegram trading layer built around ARC. Swap, copy trades, set alerts, and
-            scan tokens in a few taps while your keys stay in your wallet.
+            BLARC brings fast trading tools and upcoming AI-assisted strategies to Telegram. Find
+            opportunities, prepare trades, and approve every move from your own wallet.
           </p>
           <div class="hero-actions">
             <a class="button primary" href="https://t.me/theBLARCbot" rel="noopener">Open @theBLARCbot</a>
             <a class="button secondary" href="https://x.com/blARCthedawg" rel="noopener">Follow on X</a>
           </div>
           <ul class="hero-points" aria-label="Highlights">
-            <li>ARC at the core</li>
+            <li>Non-custodial</li>
             <li>Button-first menu</li>
             <li>Multi-chain reach</li>
           </ul>
         </div>
-        <div class="hero-visual" aria-label="BLARC mascot and bot menu preview">
-          <img src="assets/blarc-mascot.jpg" alt="BLARC mascot logo" />
+        <div class="hero-visual mascot-stage" aria-label="Interactive 3D BLARC mascot card">
+          <canvas id="mascot-canvas" aria-hidden="true"></canvas>
+          <img class="mascot-fallback" src="assets/blarc-mascot.jpg" alt="BLARC mascot logo" />
+          <span class="stage-label">BLARC / AI TRADING</span>
           <div class="terminal-card" aria-hidden="true">
             <p><span class="pulse"></span>Tap a button below.</p>
             <div class="menu-grid">
@@ -97,7 +98,7 @@
 
       <section class="chain-strip" aria-label="Supported chains">
         <div class="marquee">
-          <span class="arc-chain">ARC · HOME NETWORK</span>
+          <span>ARC</span>
           <span>Solana</span>
           <span>Robinhood Chain</span>
           <span>Ethereum</span>
@@ -107,7 +108,7 @@
           <span>Optimism</span>
           <span>Polygon</span>
           <span>Avalanche</span>
-          <span class="arc-chain">ARC · HOME NETWORK</span>
+          <span>ARC</span>
           <span>Solana</span>
           <span>Robinhood Chain</span>
           <span>Ethereum</span>
@@ -117,24 +118,6 @@
           <span>Optimism</span>
           <span>Polygon</span>
           <span>Avalanche</span>
-        </div>
-      </section>
-
-      <section class="section arc-focus" id="arc" aria-labelledby="arc-title">
-        <div class="arc-mark" aria-hidden="true">ARC</div>
-        <div class="arc-copy">
-          <p class="eyebrow">The home network</p>
-          <h2 id="arc-title">BLARC starts with ARC.</h2>
-          <p>
-            ARC is not another chain in a long list. It is the project at the center of BLARC's
-            identity, product direction, and community. Multi-chain routes extend the experience;
-            ARC remains home.
-          </p>
-        </div>
-        <div class="arc-values" aria-label="BLARC's ARC focus">
-          <div><strong>ARC first</strong><span>Designed around the ARC ecosystem.</span></div>
-          <div><strong>Telegram native</strong><span>Clear, tappable trading flows.</span></div>
-          <div><strong>Self-custody</strong><span>Your wallet. Your final signature.</span></div>
         </div>
       </section>
 
@@ -190,7 +173,7 @@
           <article>
             <span>01</span>
             <h3>Quick swaps</h3>
-            <p>Trade on ARC first, with routes to Solana, Robinhood Chain, and supported EVM networks.</p>
+            <p>Trade across ARC, Solana, Robinhood Chain, and supported EVM networks.</p>
           </article>
           <article>
             <span>02</span>
@@ -241,7 +224,7 @@
           <a class="button secondary" href="https://t.me/BLARCUpdates" rel="noopener">Follow V2 updates</a>
         </div>
         <div class="v2-flow" aria-label="Planned V2 AI trading flow">
-          <div><span>01</span><strong>Scan</strong><small>Monitor ARC markets and emerging opportunities.</small></div>
+          <div><span>01</span><strong>Scan</strong><small>Monitor supported markets and emerging opportunities.</small></div>
           <div><span>02</span><strong>Analyze</strong><small>Score momentum, liquidity, risk, and fit.</small></div>
           <div><span>03</span><strong>Prepare</strong><small>Build a clear trade plan around your settings.</small></div>
           <div><span>04</span><strong>You decide</strong><small>Review every idea and sign only when ready.</small></div>
@@ -388,5 +371,6 @@
     </footer>
 
     <script src="script.js?v=20261010-1"></script>
+    <script type="module" src="mascot-card.js?v=20261010-2"></script>
   </body>
 </html>

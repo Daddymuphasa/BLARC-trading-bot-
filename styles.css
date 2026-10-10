@@ -906,7 +906,7 @@ h3 {
 }
 
 .brand small {
-  color: var(--green);
+  color: var(--cyan);
   font-size: 0.52rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -915,7 +915,7 @@ h3 {
 }
 
 .hero h1 > span {
-  color: var(--green);
+  color: var(--cyan);
   display: block;
 }
 
@@ -1192,7 +1192,7 @@ code {
 
 /* October polish: calmer depth, clearer actions, and denser mobile navigation. */
 :root {
-  --amber: #69e6a2;
+  --amber: #65e1ff;
   --coral: #ff7a68;
   --surface: rgba(10, 22, 31, 0.88);
   --surface-raised: rgba(17, 34, 45, 0.9);
@@ -1368,8 +1368,8 @@ h1 {
 
 .v2-ai {
   background:
-    linear-gradient(120deg, rgba(71, 184, 255, 0.12), transparent 42%),
-    linear-gradient(300deg, rgba(105, 230, 162, 0.1), transparent 48%),
+    linear-gradient(120deg, rgba(71, 184, 255, 0.1), transparent 42%),
+    linear-gradient(300deg, rgba(142, 233, 255, 0.06), transparent 48%),
     rgba(5, 13, 18, 0.76);
   border-block: 1px solid var(--line);
   display: grid;
@@ -1403,9 +1403,64 @@ h1 {
 }
 
 .v2-flow span {
-  color: var(--green);
+  color: var(--cyan);
   font-size: 0.72rem;
   font-weight: 900;
+}
+
+.mascot-stage {
+  min-height: 35rem;
+  overflow: hidden;
+  position: relative;
+}
+
+#mascot-canvas {
+  display: block;
+  inset: 0;
+  position: absolute;
+  touch-action: pan-y;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.mascot-fallback {
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  opacity: 1;
+  position: absolute;
+  transition: opacity 300ms ease;
+  width: 100%;
+}
+
+.mascot-stage.is-3d-ready .mascot-fallback {
+  opacity: 0;
+}
+
+.stage-label {
+  color: rgba(217, 245, 255, 0.72);
+  font-size: 0.66rem;
+  font-weight: 800;
+  left: 1.25rem;
+  letter-spacing: 0.16em;
+  position: absolute;
+  top: 1.2rem;
+  z-index: 3;
+}
+
+.mascot-stage .terminal-card {
+  bottom: 1rem;
+  left: 1rem;
+  position: absolute;
+  right: 1rem;
+  z-index: 4;
+}
+
+@media (max-width: 620px) {
+  .mascot-stage {
+    min-height: 31rem;
+  }
 }
 
 .v2-flow strong {
