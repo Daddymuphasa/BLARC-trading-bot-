@@ -1409,7 +1409,7 @@ h1 {
 }
 
 .mascot-stage {
-  min-height: 35rem;
+  min-height: 43rem;
   overflow: hidden;
   position: relative;
 }
@@ -1459,7 +1459,19 @@ h1 {
 
 @media (max-width: 620px) {
   .mascot-stage {
-    min-height: 31rem;
+    min-height: 36rem;
+  }
+}
+
+@media (min-width: 981px) {
+  .hero {
+    gap: clamp(2rem, 3vw, 3.5rem);
+    grid-template-columns: minmax(0, 0.84fr) minmax(30rem, 1.16fr);
+    max-width: 1320px;
+  }
+
+  .mascot-stage {
+    width: 108%;
   }
 }
 
