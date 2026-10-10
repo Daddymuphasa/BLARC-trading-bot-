@@ -906,7 +906,7 @@ h3 {
 }
 
 .brand small {
-  color: var(--amber);
+  color: var(--green);
   font-size: 0.52rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -915,12 +915,12 @@ h3 {
 }
 
 .hero h1 > span {
-  color: var(--amber);
+  color: var(--green);
   display: block;
 }
 
 .marquee .arc-chain {
-  background: var(--amber);
+  background: var(--green);
   border-radius: 0.3rem;
   color: #071014;
   font-weight: 900;
@@ -930,7 +930,7 @@ h3 {
 .arc-focus {
   align-items: center;
   background:
-    linear-gradient(110deg, rgba(255, 200, 87, 0.12), transparent 48%),
+    linear-gradient(110deg, rgba(105, 230, 162, 0.12), transparent 48%),
     rgba(5, 13, 18, 0.74);
   border-bottom: 1px solid var(--line);
   border-top: 1px solid var(--line);
@@ -942,7 +942,7 @@ h3 {
 }
 
 .arc-mark {
-  color: var(--amber);
+  color: var(--green);
   font-size: clamp(4.5rem, 10vw, 9rem);
   font-weight: 900;
   line-height: 0.8;
@@ -1192,7 +1192,7 @@ code {
 
 /* October polish: calmer depth, clearer actions, and denser mobile navigation. */
 :root {
-  --amber: #ffc857;
+  --amber: #69e6a2;
   --coral: #ff7a68;
   --surface: rgba(10, 22, 31, 0.88);
   --surface-raised: rgba(17, 34, 45, 0.9);
@@ -1202,7 +1202,7 @@ body {
   background:
     linear-gradient(120deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 34px),
     radial-gradient(circle at 12% 8%, rgba(71, 184, 255, 0.2), transparent 28rem),
-    radial-gradient(circle at 86% 24%, rgba(255, 200, 87, 0.1), transparent 24rem),
+    radial-gradient(circle at 86% 24%, rgba(105, 230, 162, 0.1), transparent 24rem),
     radial-gradient(circle at 55% 82%, rgba(105, 230, 162, 0.1), transparent 30rem),
     #071016;
 }
@@ -1238,7 +1238,7 @@ body::before { opacity: 0.18; }
 .header-cta:hover,
 .button.primary:hover { box-shadow: 0 16px 42px rgba(71, 184, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.8); }
 .button.secondary:hover,
-.button.ghost:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 200, 87, 0.55); }
+.button.ghost:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(105, 230, 162, 0.55); }
 
 .hero {
   min-height: calc(100svh - 10rem);
@@ -1246,7 +1246,7 @@ body::before { opacity: 0.18; }
   padding-top: clamp(2rem, 4vw, 3.5rem);
 }
 .hero::before { opacity: 0.72; }
-.hero::after { border-color: rgba(255, 200, 87, 0.24); }
+.hero::after { border-color: rgba(105, 230, 162, 0.24); }
 h1 {
   background: linear-gradient(105deg, var(--white), var(--chrome) 42%, #8ee9ff 72%, var(--amber));
   -webkit-background-clip: text;
@@ -1274,7 +1274,7 @@ h1 {
 .menu-grid span,
 .tap-row span { border-radius: 0.4rem; }
 
-.chain-strip { border-color: rgba(255, 200, 87, 0.2); padding: 0.9rem 0; }
+.chain-strip { border-color: rgba(105, 230, 162, 0.2); padding: 0.9rem 0; }
 .marquee span:nth-child(3n + 2) {
   background: linear-gradient(90deg, var(--amber), var(--white));
   -webkit-background-clip: text;
@@ -1298,7 +1298,7 @@ h1 {
 .steps span { background: var(--amber); border-radius: 0.35rem; }
 .security {
   background:
-    linear-gradient(115deg, rgba(71, 184, 255, 0.09), rgba(255, 200, 87, 0.045) 48%, rgba(105, 230, 162, 0.06)),
+    linear-gradient(115deg, rgba(71, 184, 255, 0.09), rgba(105, 230, 162, 0.045) 48%, rgba(105, 230, 162, 0.06)),
     rgba(5, 13, 18, 0.7);
 }
 .accordion button { min-height: 4.5rem; transition: color 160ms ease, padding 160ms ease; }
@@ -1361,7 +1361,86 @@ h1 {
 /* Keep ARC visually primary after the general refresh rules above. */
 .marquee span.arc-chain {
   -webkit-background-clip: border-box;
-  background: var(--amber);
+  background: var(--green);
   background-clip: border-box;
   color: #071014;
+}
+
+.v2-ai {
+  background:
+    linear-gradient(120deg, rgba(71, 184, 255, 0.12), transparent 42%),
+    linear-gradient(300deg, rgba(105, 230, 162, 0.1), transparent 48%),
+    rgba(5, 13, 18, 0.76);
+  border-block: 1px solid var(--line);
+  display: grid;
+  gap: clamp(2rem, 5vw, 4.5rem);
+  grid-template-columns: minmax(18rem, 0.9fr) minmax(28rem, 1.35fr);
+  max-width: none;
+  padding-inline: max(1.5rem, calc((100vw - 1200px) / 2));
+}
+
+.v2-heading h2 {
+  margin-bottom: 1rem;
+}
+
+.v2-heading .button {
+  margin-top: 1.5rem;
+}
+
+.v2-flow {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.v2-flow div {
+  background: rgba(8, 20, 28, 0.8);
+  display: grid;
+  gap: 0.4rem;
+  min-height: 10rem;
+  padding: 1.5rem;
+}
+
+.v2-flow span {
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.v2-flow strong {
+  font-size: 1.05rem;
+}
+
+.v2-flow small,
+.v2-note {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.v2-note {
+  font-size: 0.78rem;
+  grid-column: 1 / -1;
+  margin: -2.5rem 0 0;
+}
+
+@media (max-width: 900px) {
+  .v2-ai {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-note {
+    grid-column: auto;
+    margin-top: -1rem;
+  }
+}
+
+@media (max-width: 620px) {
+  .v2-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-flow div {
+    min-height: 0;
+  }
 }
