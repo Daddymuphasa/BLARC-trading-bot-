@@ -1079,3 +1079,171 @@ code {
   object-fit: cover;
   object-position: center 40%;
 }
+
+/* October polish: calmer depth, clearer actions, and denser mobile navigation. */
+:root {
+  --amber: #ffc857;
+  --coral: #ff7a68;
+  --surface: rgba(10, 22, 31, 0.88);
+  --surface-raised: rgba(17, 34, 45, 0.9);
+}
+
+body {
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 34px),
+    radial-gradient(circle at 12% 8%, rgba(71, 184, 255, 0.2), transparent 28rem),
+    radial-gradient(circle at 86% 24%, rgba(255, 200, 87, 0.1), transparent 24rem),
+    radial-gradient(circle at 55% 82%, rgba(105, 230, 162, 0.1), transparent 30rem),
+    #071016;
+}
+
+body::before { opacity: 0.18; }
+::selection { background: var(--amber); color: var(--ink); }
+:focus-visible { outline: 3px solid var(--amber); outline-offset: 4px; }
+
+.site-header { background: rgba(7, 16, 22, 0.86); min-height: 4.5rem; }
+.nav-links a { padding: 0.45rem 0; position: relative; }
+.nav-links a::after {
+  background: linear-gradient(90deg, var(--cyan), var(--amber));
+  bottom: 0;
+  content: "";
+  height: 2px;
+  left: 0;
+  position: absolute;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 180ms ease;
+  width: 100%;
+}
+.nav-links a:hover::after,
+.nav-links a[aria-current="true"]::after { transform: scaleX(1); }
+
+.header-cta,
+.button { border-radius: 0.5rem; min-height: 3rem; }
+.header-cta,
+.button.primary {
+  background: linear-gradient(135deg, #8ee9ff, #47b8ff 58%, #b6f5ff);
+  box-shadow: 0 12px 34px rgba(71, 184, 255, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+.header-cta:hover,
+.button.primary:hover { box-shadow: 0 16px 42px rgba(71, 184, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.8); }
+.button.secondary:hover,
+.button.ghost:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 200, 87, 0.55); }
+
+.hero {
+  min-height: calc(100svh - 10rem);
+  padding-bottom: clamp(1.5rem, 3vw, 2.5rem);
+  padding-top: clamp(2rem, 4vw, 3.5rem);
+}
+.hero::before { opacity: 0.72; }
+.hero::after { border-color: rgba(255, 200, 87, 0.24); }
+h1 {
+  background: linear-gradient(105deg, var(--white), var(--chrome) 42%, #8ee9ff 72%, var(--amber));
+  -webkit-background-clip: text;
+  background-clip: text;
+  font-size: clamp(3.2rem, 5.5vw, 5rem);
+  line-height: 0.98;
+}
+.hero-text { line-height: 1.65; max-width: 38rem; }
+.hero-points li { background: rgba(7, 16, 22, 0.7); border-radius: 0.45rem; padding: 0.55rem 0.8rem; }
+.hero-points li::before { color: var(--green); content: "✓"; margin-right: 0.45rem; }
+
+.hero-visual,
+.mock-phone,
+.community-card,
+.product-panel,
+.security-grid article,
+.feature-grid article,
+.steps li { border-radius: 0.5rem; }
+.hero-visual { background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(71, 184, 255, 0.06) 42%, rgba(5, 12, 17, 0.92)); }
+.hero-visual > img,
+.panel-image,
+.guide-grid img { border-radius: 0.4rem; }
+.hero-visual > img { height: min(23rem, 52svh); min-height: 0; }
+.terminal-card { background: rgba(5, 12, 17, 0.88); border-color: rgba(142, 233, 255, 0.5); border-radius: 0.5rem; }
+.menu-grid span,
+.tap-row span { border-radius: 0.4rem; }
+
+.chain-strip { border-color: rgba(255, 200, 87, 0.2); padding: 0.9rem 0; }
+.marquee span:nth-child(3n + 2) {
+  background: linear-gradient(90deg, var(--amber), var(--white));
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.section { padding-block: clamp(4.5rem, 9vw, 7.5rem); }
+.section-heading { margin-bottom: 2.5rem; }
+.feature-grid,
+.steps,
+.security-grid { gap: 0.85rem; }
+.feature-grid article,
+.security-grid article,
+.steps li {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.018)), var(--surface);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.feature-grid article:nth-child(3n + 2) > span { color: var(--amber); }
+.feature-grid article p,
+.steps li p,
+.security-grid article p { font-size: 0.94rem; line-height: 1.6; }
+.steps span { background: var(--amber); border-radius: 0.35rem; }
+.security {
+  background:
+    linear-gradient(115deg, rgba(71, 184, 255, 0.09), rgba(255, 200, 87, 0.045) 48%, rgba(105, 230, 162, 0.06)),
+    rgba(5, 13, 18, 0.7);
+}
+.accordion button { min-height: 4.5rem; transition: color 160ms ease, padding 160ms ease; }
+.accordion button:hover { color: var(--amber); padding-left: 0.35rem; }
+.accordion button::after {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  display: flex;
+  flex: 0 0 2rem;
+  height: 2rem;
+  justify-content: center;
+  margin-left: 1rem;
+  width: 2rem;
+}
+.community-links a:hover { border-color: var(--amber); color: var(--amber); }
+.legal { line-height: 1.6; }
+
+[data-reveal] { opacity: 0; transform: translateY(18px); transition: opacity 520ms ease, transform 520ms ease; }
+[data-reveal].is-visible { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 980px) {
+  .site-header { align-items: center; flex-wrap: wrap; padding-bottom: 0.65rem; }
+  .nav-links {
+    display: flex;
+    flex-basis: 100%;
+    flex-wrap: nowrap;
+    gap: 1.25rem;
+    order: 3;
+    overflow-x: auto;
+    padding: 0.25rem 0 0.15rem;
+    scrollbar-width: none;
+  }
+  .nav-links::-webkit-scrollbar { display: none; }
+  .nav-links a { flex: 0 0 auto; }
+  .hero { padding-top: 3.5rem; }
+}
+
+@media (max-width: 620px) {
+  .site-header { gap: 0.6rem; }
+  .brand img { height: 2.15rem; width: 2.15rem; }
+  .header-cta { min-height: 2.5rem; }
+  .hero { gap: 2.25rem; padding-inline: 1rem; }
+  h1 { font-size: clamp(3rem, 16vw, 4.5rem); }
+  .hero-actions .button,
+  .inline-actions .button { width: 100%; }
+  .hero-points { display: grid; grid-template-columns: 1fr; }
+  .hero-visual { padding: 0.35rem; }
+  .hero-visual > img { min-height: 17rem; }
+  .terminal-card { margin-top: 0.6rem; }
+  .menu-grid { grid-template-columns: 1fr; }
+  .section { padding-inline: 1rem; }
+  .community-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] { opacity: 1; transform: none; }
+}

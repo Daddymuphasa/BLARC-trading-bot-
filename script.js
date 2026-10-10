@@ -38,6 +38,12 @@ accordionButtons.forEach((button) => {
   button.addEventListener("click", () => {
     const content = button.nextElementSibling;
     const isOpen = button.getAttribute("aria-expanded") === "true";
+    accordionButtons.forEach((item) => {
+      if (item !== button) {
+        item.setAttribute("aria-expanded", "false");
+        item.nextElementSibling.hidden = true;
+      }
+    });
     button.setAttribute("aria-expanded", String(!isOpen));
     content.hidden = isOpen;
   });
@@ -70,3 +76,38 @@ if (!prefersReducedMotion) {
 
 window.addEventListener("scroll", setHeaderState, { passive: true });
 setHeaderState();
+
+const revealTargets = Array.from(
+  document.querySelectorAll(".section-heading, .feature-grid article, .steps li, .security-grid article, .guide-grid img"),
+);
+
+if (prefersReducedMotion || !("IntersectionObserver" in window)) {
+  revealTargets.forEach((item) => item.classList.add("is-visible"));
+} else {
+  revealTargets.forEach((item) => item.setAttribute("data-reveal", ""));
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      });
+    },
+    { rootMargin: "0px 0px -8%", threshold: 0.12 },
+  );
+  revealTargets.forEach((item) => observer.observe(item));
+}
+
+const sections = Array.from(document.querySelectorAll("main section[id]"));
+const navLinks = Array.from(document.querySelectorAll('.nav-links a[href^="#"]'));
+if ("IntersectionObserver" in window) {
+  const sectionObserver = new IntersectionObserver(
+    (entries) => {
+      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (!visible) return;
+      navLinks.forEach((link) => link.setAttribute("aria-current", String(link.hash === `#${visible.target.id}`)));
+    },
+    { rootMargin: "-25% 0px -60%", threshold: [0, 0.2, 0.5] },
+  );
+  sections.forEach((section) => sectionObserver.observe(section));
+}
